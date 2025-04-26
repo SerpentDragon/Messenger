@@ -1,0 +1,11 @@
+API/.vscode/
+build*
+Messenger/.vscode/
+Messenger/CMakeFiles/
+Messenger/cmake_install.cmake
+Messenger/CMakeLists.txt.user
+Messenger/Makefile
+Server/.vscode
+Server/build
+Server/Makefile
+SQL/.vscode/

@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/login_window">
+        <file>resources/login_window/closed_eye.png</file>
+        <file>resources/login_window/opened_eye.png</file>
+    </qresource>
+    <qresource prefix="/main_window">
+        <file>resources/main_window/menu.png</file>
+        <file>resources/main_window/check.png</file>
+        <file>resources/main_window/chat_settings.png</file>
+        <file>resources/main_window/new_chat.png</file>
+        <file>resources/main_window/P2P.png</file>
+    </qresource>
+</RCC>
