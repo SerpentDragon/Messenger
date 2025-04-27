@@ -44,9 +44,9 @@ private:
     {
         LOG_IN = 0,
         SIGN_UP = 1
-    } state;
+    } state_;
 
-    Client& client;
+    Client& client_;
 };
 
 #endif // LOGINWINDOW_H

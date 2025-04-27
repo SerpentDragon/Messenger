@@ -9,6 +9,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     setup_panel();
     setup_icons();
+
+    msg_edit_ = new AutoExpandTextEdit(ui->dialog_window);
+    msg_edit_->show();
 }
 
 MainWindow::~MainWindow()
@@ -18,17 +21,18 @@ MainWindow::~MainWindow()
 
 void MainWindow::setup_panel()
 {
-    panel = new SlidePanel(ui->menubar->height() + ui->dialogs_list->y(), ui->dialogs_list->width(), ui->dialogs_list->height(), this);
-    panel->show();
+    panel_ = new SlidePanel(ui->menubar->height() + ui->dialogs_list->y(),
+                            ui->dialogs_list->width(), ui->dialogs_list->height(), this);
+    panel_->show();
 
     connect(ui->menu_button, &QPushButton::clicked, [this]() {
-        if (panel->pos().x() < 0)
+        if (panel_->pos().x() < 0)
         {
-            panel->set_coordinates(ui->dialogs_list->y(), ui->dialogs_list->width(), ui->dialogs_list->height());
-            panel->show_panel();
+            panel_->set_coordinates(ui->dialogs_list->y(), ui->dialogs_list->width(), ui->dialogs_list->height());
+            panel_->show_panel();
         }
         else
-            panel->hide_panel();
+            panel_->hide_panel();
     });
 }
 
@@ -43,5 +47,7 @@ void MainWindow::setup_icons()
 void MainWindow::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
-    panel->set_coordinates(ui->dialogs_list->y(), ui->dialogs_list->width(), ui->dialogs_list->height());
+
+    msg_edit_->set_coordinates(ui->dialog_window->height(), ui->dialog_window->width());
+    panel_->set_coordinates(ui->dialogs_list->y(), ui->dialogs_list->width(), ui->dialogs_list->height());
 }

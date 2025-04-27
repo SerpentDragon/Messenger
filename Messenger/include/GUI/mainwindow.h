@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "autoexpandtextedit.h"
 #include "slidepanel.h"
 
 #include <QFont>
@@ -37,6 +38,8 @@ private:
 private:
     Ui::MainWindow* ui;
 
-    SlidePanel* panel;
+    SlidePanel* panel_;
+
+    AutoExpandTextEdit* msg_edit_;
 };
 #endif // MAINWINDOW_H

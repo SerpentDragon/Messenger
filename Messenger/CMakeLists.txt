@@ -23,12 +23,14 @@ set(PROJECT_SOURCES
     src/GUI/mainwindow.cpp
     src/GUI/loginwindow.cpp
     src/GUI/slidepanel.cpp
+    src/GUI/autoexpandtextedit.cpp
     src/Client/client.cpp
     src/Client/cryptographer.cpp
     
     include/GUI/mainwindow.h
     include/GUI/loginwindow.h
     include/GUI/slidepanel.h
+    include/GUI/autoexpandtextedit.h
     include/GUI/common.h
     include/Client/client.h
     include/Client/cryptographer.h

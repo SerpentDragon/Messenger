@@ -9,8 +9,8 @@ const QString htmlTemplate = R"(
 
 LoginWindow::LoginWindow(Client& cl, QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::LoginWindow), client(cl),
-    state(STATE::LOG_IN)
+    , ui(new Ui::LoginWindow), client_(cl),
+    state_(STATE::LOG_IN)
 {
     ui->setupUi(this);
 
@@ -35,7 +35,7 @@ void LoginWindow::on_sign_up_label_linkActivated(const QString &link)
 {
     ui->repeat_password_edit->clear();
 
-    if (state == STATE::LOG_IN)
+    if (state_ == STATE::LOG_IN)
     {
         ui->log_in_label->setText("Sign Up");
         ui->repeat_password_label->show();
@@ -43,9 +43,9 @@ void LoginWindow::on_sign_up_label_linkActivated(const QString &link)
         ui->sign_up_label->setText(htmlTemplate.arg("Back"));
         ui->log_in_button->setText("Sign Up");
 
-        state = STATE::SIGN_UP;
+        state_ = STATE::SIGN_UP;
     }
-    else if (state == STATE::SIGN_UP)
+    else if (state_ == STATE::SIGN_UP)
     {
         ui->log_in_label->setText("Log In");
         ui->repeat_password_label->hide();
@@ -53,7 +53,7 @@ void LoginWindow::on_sign_up_label_linkActivated(const QString &link)
         ui->sign_up_label->setText(htmlTemplate.arg("Sign Up?"));
         ui->log_in_button->setText("Log In");
 
-        state = STATE::LOG_IN;
+        state_ = STATE::LOG_IN;
     }
 }
 
@@ -76,7 +76,7 @@ void LoginWindow::on_log_in_button_pressed()
     ui->nickname_edit->clear();
     ui->password_edit->clear();
 
-    if (state == STATE::SIGN_UP)
+    if (state_ == STATE::SIGN_UP)
     {
         const std::string repeated_password = ui->repeat_password_edit->text().toStdString();
         ui->repeat_password_edit->clear();
@@ -89,9 +89,9 @@ void LoginWindow::on_log_in_button_pressed()
 
         log_in = false;
     }
-
-    client.send_user_data(log_in, nickname, password);
-    auto resp = client.get_auth_resp();
+    
+    client_.send_user_data(log_in, nickname, password);
+    auto resp = client_.get_auth_resp();
 
     if (resp != SERVER_RESP_CODES::OK)
     {
