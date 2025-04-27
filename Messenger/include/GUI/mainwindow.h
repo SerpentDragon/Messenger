@@ -3,7 +3,12 @@
 
 #include "slidepanel.h"
 
+#include <QFont>
+#include <QGraphicsDropShadowEffect>
 #include <QMainWindow>
+#include <QPainter>
+#include <QStandardItem>
+#include <QWidget>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {

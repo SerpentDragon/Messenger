@@ -1,9 +1,6 @@
 #include "../../include/GUI/loginwindow.h"
 #include "ui/ui_loginwindow.h"
 
-#include <QMessageBox>
-#include <QStyle>
-
 const QString htmlTemplate = R"(
     <a href="my_click">
         <span style="color:blue; text-decoration:underline;">%1</span>

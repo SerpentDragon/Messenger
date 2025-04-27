@@ -5,6 +5,8 @@
 #include "common.h"
 
 #include <QMainWindow>
+#include <QMessageBox>
+#include <QStyle>
 
 namespace Ui {
 class LoginWindow;
