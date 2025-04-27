@@ -22,27 +22,28 @@ set(PROJECT_SOURCES
     src/main.cpp
     src/GUI/mainwindow.cpp
     src/GUI/loginwindow.cpp
+    src/GUI/slidepanel.cpp
     src/Client/client.cpp
     src/Client/cryptographer.cpp
-    src/GUI/slidepanel.cpp
-
+    
     include/GUI/mainwindow.h
     include/GUI/loginwindow.h
     include/GUI/slidepanel.h
+    include/GUI/common.h
     include/Client/client.h
     include/Client/cryptographer.h
-
+    
     ui/mainwindow.ui
     ui/loginwindow.ui
     ui/slidepanel.ui
-    resources.qrc
+
+    resources/resources.qrc
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(Messenger
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        include/GUI/common.h
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET Messenger APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

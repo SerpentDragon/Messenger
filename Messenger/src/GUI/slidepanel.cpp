@@ -22,7 +22,7 @@ SlidePanel::SlidePanel(int y, int width, int height, QWidget *parent)
     ui->change_passwd_label->setTextInteractionFlags(Qt::TextBrowserInteraction);
     ui->change_passwd_label->setOpenExternalLinks(false);
 
-    ui->change_nickname_button->setIcon(QIcon(":/main_window/resources/main_window/check.png"));
+    ui->change_nickname_button->setIcon(QIcon(":/main_window/main_window/check.png"));
 }
 
 void SlidePanel::show_panel()
@@ -67,8 +67,8 @@ void SlidePanel::hide_password_widgets()
 
 void SlidePanel::setup_icons()
 {
-    IconPtr open = IconPtr(new QIcon(":/login_window/resources/login_window/opened_eye.png"));
-    IconPtr close = IconPtr(new QIcon(":/login_window/resources/login_window/closed_eye.png"));
+    IconPtr open = IconPtr(new QIcon(":/login_window/login_window/opened_eye.png"));
+    IconPtr close = IconPtr(new QIcon(":/login_window/logresourcesin_window/closed_eye.png"));
 
     create_password_toggle_action(ui->prev_passwd, close, open);
     create_password_toggle_action(ui->new_passwd, close, open);

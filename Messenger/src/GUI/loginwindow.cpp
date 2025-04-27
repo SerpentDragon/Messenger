@@ -60,8 +60,8 @@ void LoginWindow::on_sign_up_label_linkActivated(const QString &link)
 
 void LoginWindow::setup_icons()
 {
-    IconPtr open = IconPtr(new QIcon(":/login_window/resources/login_window/opened_eye.png"));
-    IconPtr close = IconPtr(new QIcon(":/login_window/resources/login_window/closed_eye.png"));
+    IconPtr open = IconPtr(new QIcon(":/login_window/login_window/opened_eye.png"));
+    IconPtr close = IconPtr(new QIcon(":/login_window/login_window/closed_eye.png"));
 
     create_password_toggle_action(ui->password_edit, close, open);
     create_password_toggle_action(ui->repeat_password_edit, close, open);
