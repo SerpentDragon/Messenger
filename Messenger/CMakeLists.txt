@@ -24,6 +24,7 @@ set(PROJECT_SOURCES
     src/GUI/loginwindow.cpp
     src/GUI/slidepanel.cpp
     src/GUI/autoexpandtextedit.cpp
+    src/GUI/messageentryfield.cpp
     src/Client/client.cpp
     src/Client/cryptographer.cpp
     
@@ -31,6 +32,7 @@ set(PROJECT_SOURCES
     include/GUI/loginwindow.h
     include/GUI/slidepanel.h
     include/GUI/autoexpandtextedit.h
+    include/GUI/messageentryfield.h
     include/GUI/common.h
     include/Client/client.h
     include/Client/cryptographer.h

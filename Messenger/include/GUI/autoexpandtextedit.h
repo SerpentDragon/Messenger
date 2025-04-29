@@ -11,11 +11,11 @@ public:
 
     AutoExpandTextEdit(QWidget* parent = nullptr);
 
-    void set_coordinates(int y, int width);
+    void set_width(int width);
 
-private:
+signals:
 
-    void showEvent(QShowEvent* event);
+    void change_height(int);
 
 private slots:
 

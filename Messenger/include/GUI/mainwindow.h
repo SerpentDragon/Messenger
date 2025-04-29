@@ -1,7 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "autoexpandtextedit.h"
+#include "messageentryfield.h"
 #include "slidepanel.h"
 
 #include <QFont>
@@ -40,6 +40,6 @@ private:
 
     SlidePanel* panel_;
 
-    AutoExpandTextEdit* msg_edit_;
+    MessageEntryField* msg_fld_;
 };
 #endif // MAINWINDOW_H

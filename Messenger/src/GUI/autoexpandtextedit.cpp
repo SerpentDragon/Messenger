@@ -8,9 +8,6 @@ AutoExpandTextEdit::AutoExpandTextEdit(QWidget* parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    setGeometry(0, this->parentWidget()->height() - this->height(),
-                this->parentWidget()->width(), this->height());
-
     setStyleSheet(
         "QTextEdit {"
         " padding-top: 6px;"
@@ -24,22 +21,9 @@ AutoExpandTextEdit::AutoExpandTextEdit(QWidget* parent)
     connect(this, &QTextEdit::textChanged, this, &AutoExpandTextEdit::adjust_height);
 }
 
-void AutoExpandTextEdit::set_coordinates(int y, int width)
+void AutoExpandTextEdit::set_width(int width)
 {
-    setGeometry(0, y - this->height(), width, this->height());
-}
-
-void AutoExpandTextEdit::showEvent(QShowEvent* event)
-{
-    QWidget::showEvent(event);
-
-    if (QWidget* p = parentWidget())
-    {
-        int parent_width = p->width();
-        int parent_height = p->height();
-
-        setGeometry(0, parent_height - height(), parent_width, this->height());
-    }
+    setGeometry(0, 0, width, this->height());
 }
 
 void AutoExpandTextEdit::adjust_height()
@@ -64,5 +48,5 @@ void AutoExpandTextEdit::adjust_height()
 
     setFixedHeight(doc_height);
 
-    set_coordinates(this->parentWidget()->height(), this->width());
+    emit change_height(doc_height);
 }

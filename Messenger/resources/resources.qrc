@@ -4,10 +4,12 @@
         <file>login_window/opened_eye.png</file>
     </qresource>
     <qresource prefix="/main_window">
-        <file>main_window/chat_settings.png</file>
+        <file>main_window/params.png</file>
         <file>main_window/check.png</file>
         <file>main_window/menu.png</file>
         <file>main_window/new_chat.png</file>
         <file>main_window/P2P.png</file>
+        <file>main_window/clip.png</file>
+        <file>main_window/plane.png</file>
     </qresource>
 </RCC>
