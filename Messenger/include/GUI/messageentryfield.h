@@ -3,8 +3,11 @@
 
 #include "autoexpandtextedit.h"
 
+#include <QCheckBox>
+#include <QMenu>
 #include <QPushButton>
 #include <QWidget>
+#include <QWidgetAction>
 
 class MessageEntryField : public QWidget
 {
@@ -23,6 +26,8 @@ private:
     void set_buttons_style();
 
     void set_buttons_geometry();
+
+    void msg_params_button_click();
 
 private slots:
 
