@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "chatparamswindow.h"
 #include "messageentryfield.h"
 #include "slidepanel.h"
 
@@ -27,6 +28,11 @@ public:
 
     ~MainWindow();
 
+private slots:
+    void on_new_chat_button_pressed();
+
+    void on_chat_settings_button_pressed();
+
 private:
 
     void setup_panel();
@@ -41,5 +47,7 @@ private:
     SlidePanel* panel_;
 
     MessageEntryField* msg_fld_;
+
+    ChatParamsWindow* chat_params_wnd_;
 };
 #endif // MAINWINDOW_H

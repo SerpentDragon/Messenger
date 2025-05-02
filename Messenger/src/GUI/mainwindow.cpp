@@ -51,3 +51,17 @@ void MainWindow::resizeEvent(QResizeEvent* event)
     msg_fld_->calculate_widgets_pos();
     panel_->set_coordinates(ui->dialogs_list->y(), ui->dialogs_list->width(), ui->dialogs_list->height());
 }
+
+void MainWindow::on_new_chat_button_pressed()
+{
+    chat_params_wnd_ = new ChatParamsWindow(this);
+    chat_params_wnd_->show();
+}
+
+
+void MainWindow::on_chat_settings_button_pressed()
+{
+    chat_params_wnd_ = new ChatParamsWindow(this);
+    chat_params_wnd_->show();
+}
+
