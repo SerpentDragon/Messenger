@@ -27,11 +27,17 @@ private:
 
     void set_buttons_geometry();
 
-    void msg_params_button_click();
+    void msg_params_button_pressed();
+
+    void send_msg_button_pressed();
 
 private slots:
 
     void handle_height_change(int height);
+
+signals:
+
+    void send_msg_text(const QString& text);
 
 private:
 

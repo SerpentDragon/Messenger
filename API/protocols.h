@@ -10,4 +10,12 @@ namespace USER_DATA
 namespace SERVER_RESPONSE
 {
     inline constexpr char status[] = "response.status";
-}
+    inline constexpr char id[] = "response.id";
+};
+
+namespace MSG_TAGS
+{
+    inline constexpr char sender[] = "msg.sender";
+    inline constexpr char receiver[] = "msg.receiver";
+    inline constexpr char text[] = "msg.text";
+};

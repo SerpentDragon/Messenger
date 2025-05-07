@@ -49,8 +49,8 @@ private:
     {
         std::cout << __func__ << '\n';
 
-        boost::shared_ptr<boost::array<char, 500>> data(new boost::array<char, 500>);
-        memset(data->data(), 0, 500);
+        boost::shared_ptr<boost::array<char, msg_length_>> data(new boost::array<char, msg_length_>);
+        memset(data->data(), 0, msg_length_);
         
         new_socket->async_receive(boost::asio::buffer(*data),
             [this, data, new_socket](const boost::system::error_code& ec, size_t)
@@ -89,7 +89,6 @@ private:
             if (password_from_db == password)
             {
                 resp = SERVER_RESP_CODES::OK;
-                clients_[id] = new_socket;
             }
 
             if (password_from_db.empty())
@@ -107,8 +106,6 @@ private:
             if (db_manager_.sign_up_client(id, nickname, password))
             {
                 resp = SERVER_RESP_CODES::OK;
-                clients_[id] = new_socket;
-
             }
             else
             {
@@ -116,25 +113,56 @@ private:
             }   
         }
 
-        build_response(tree_, resp);
+        build_response(tree_, resp, id);
 
         std::ostringstream oss;
         boost::property_tree::write_xml(oss, tree_);
 
         new_socket->send(boost::asio::buffer(oss.str()), 0);
 
+        tree_.clear();
+
         if (resp != SERVER_RESP_CODES::OK)
         {
             std::cout << "Try again\n";
             handle_accept(new_socket);
         }
+
+        online_clients_[id] = new_socket;
+
+        start_read(id);
+    }
+
+    void start_read(int id)
+    {
+        // auto socket = online_clients_[id];
+
+        // boost::shared_ptr<boost::array<char, msg_length_>> data(new boost::array<char, msg_length_>);
+        // memset(data->data(), 0, msg_length_);
+
+        // socket->async_receive(boost::asio::buffer(*data), 
+        //     [this, data, socket](const boost::system::error_code& ec, size_t)
+        //     {
+        //         if (!ec)
+        //         {
+        //             std::stringstream ss(data->data());
+        //             read_xml(ss, tree_);
+
+        //             int receiver = tree_.get<int>(MSG_TAGS::receiver);
+
+        //             tree_.clear();
+
+        //             online_clients_[receiver]->send(*data);
+        //         }
+        //     });
     }
 
 private:
 
-    static void build_response(ptree& tree, SERVER_RESP_CODES rc)
+    static void build_response(ptree& tree, SERVER_RESP_CODES rc, int id)
     {
         tree.put(SERVER_RESPONSE::status, rc);
+        tree.put(SERVER_RESPONSE::id, id);
     }
 
 private:
@@ -142,10 +170,12 @@ private:
     boost::asio::io_service& io_;
     tcp::acceptor acceptor_;
 
-    std::map<int, boost::shared_ptr<tcp::socket>> clients_;
+    std::map<int, boost::shared_ptr<tcp::socket>> online_clients_;
 
     DB_Server_Manager db_manager_;
     ptree tree_;
+
+    static constexpr int msg_length_ = 2000;
 };
 
 int main()

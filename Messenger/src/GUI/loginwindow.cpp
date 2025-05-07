@@ -7,9 +7,9 @@ const QString htmlTemplate = R"(
     </a>
 )";
 
-LoginWindow::LoginWindow(Client& cl, QWidget *parent)
+LoginWindow::LoginWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::LoginWindow), client_(cl),
+    , ui(new Ui::LoginWindow),
     state_(STATE::LOG_IN)
 {
     ui->setupUi(this);
@@ -31,33 +31,6 @@ LoginWindow::~LoginWindow()
     delete ui;
 }
 
-void LoginWindow::on_sign_up_label_linkActivated(const QString &link)
-{
-    ui->repeat_password_edit->clear();
-
-    if (state_ == STATE::LOG_IN)
-    {
-        ui->log_in_label->setText("Sign Up");
-        ui->repeat_password_label->show();
-        ui->repeat_password_edit->show();
-        ui->sign_up_label->setText(htmlTemplate.arg("Back"));
-        ui->log_in_button->setText("Sign Up");
-
-        state_ = STATE::SIGN_UP;
-    }
-    else if (state_ == STATE::SIGN_UP)
-    {
-        ui->log_in_label->setText("Log In");
-        ui->repeat_password_label->hide();
-        ui->repeat_password_edit->hide();
-        ui->sign_up_label->setText(htmlTemplate.arg("Sign Up?"));
-        ui->log_in_button->setText("Log In");
-
-        state_ = STATE::LOG_IN;
-    }
-}
-
-
 void LoginWindow::setup_icons()
 {
     IconPtr open = IconPtr(new QIcon(":/login_window/login_window/opened_eye.png"));
@@ -67,32 +40,8 @@ void LoginWindow::setup_icons()
     create_password_toggle_action(ui->repeat_password_edit, close, open);
 }
 
-void LoginWindow::on_log_in_button_pressed()
+void LoginWindow::process_auth_resp(SERVER_RESP_CODES resp, int id)
 {
-    bool log_in = true;
-    const std::string nickname = ui->nickname_edit->text().toStdString();
-    const std::string password = ui->password_edit->text().toStdString();
-
-    ui->nickname_edit->clear();
-    ui->password_edit->clear();
-
-    if (state_ == STATE::SIGN_UP)
-    {
-        const std::string repeated_password = ui->repeat_password_edit->text().toStdString();
-        ui->repeat_password_edit->clear();
-
-        if (password != repeated_password)
-        {
-            QMessageBox::critical(this, "Error", "Passwords don't match!");
-            return;
-        }
-
-        log_in = false;
-    }
-    
-    client_.send_user_data(log_in, nickname, password);
-    auto resp = client_.get_auth_resp();
-
     if (resp != SERVER_RESP_CODES::OK)
     {
         QString msg;
@@ -121,8 +70,61 @@ void LoginWindow::on_log_in_button_pressed()
         return;
     }
 
-    // it's time to open mainwindow!!!
-    // QMessageBox::information(this, "Info", "Success!");
-
     emit log_in_success();
+}
+
+void LoginWindow::on_sign_up_label_linkActivated(const QString &link)
+{
+    ui->repeat_password_edit->clear();
+
+    if (state_ == STATE::LOG_IN)
+    {
+        ui->log_in_label->setText("Sign Up");
+        ui->repeat_password_label->show();
+        ui->repeat_password_edit->show();
+        ui->sign_up_label->setText(htmlTemplate.arg("Back"));
+        ui->log_in_button->setText("Sign Up");
+
+        state_ = STATE::SIGN_UP;
+    }
+    else if (state_ == STATE::SIGN_UP)
+    {
+        ui->log_in_label->setText("Log In");
+        ui->repeat_password_label->hide();
+        ui->repeat_password_edit->hide();
+        ui->sign_up_label->setText(htmlTemplate.arg("Sign Up?"));
+        ui->log_in_button->setText("Log In");
+
+        state_ = STATE::LOG_IN;
+    }
+}
+
+void LoginWindow::on_log_in_button_pressed()
+{
+    bool log_in = true;
+    const std::string nickname = ui->nickname_edit->text().toStdString();
+    const std::string password = ui->password_edit->text().toStdString();
+
+    ui->nickname_edit->clear();
+    ui->password_edit->clear();
+
+    if (state_ == STATE::SIGN_UP)
+    {
+        const std::string repeated_password = ui->repeat_password_edit->text().toStdString();
+        ui->repeat_password_edit->clear();
+
+        if (password != repeated_password)
+        {
+            QMessageBox::critical(this, "Error", "Passwords don't match!");
+            return;
+        }
+
+        log_in = false;
+    }
+
+    emit log_in_user(log_in, nickname, password);
+
+    qDebug() << "EMITTED\n";
+    
+    // client_.send_user_data(log_in, nickname, password);
 }

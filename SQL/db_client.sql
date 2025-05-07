@@ -1,0 +1,19 @@
+CREATE TABLE Personal 
+(
+    id INT PRIMARY KEY,
+    nickname VARCHAR(50) UNIQUE NOT NULL,
+	picture VARCHAR(200)
+);
+
+CREATE TABLE Contact
+(
+	id INT PRIMARY KEY,
+	nickname VARCHAR(50) UNIQUE NOT NULL
+);
+
+CREATE TABLE Message
+(
+	id SERIAL PRIMARY KEY,
+	receiver INT NOT NULL,
+	sender INT NOT NULL
+);

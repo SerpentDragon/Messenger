@@ -12,6 +12,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     msg_fld_ = new MessageEntryField(ui->dialog_window);
     msg_fld_->show();
+
+    connect(msg_fld_, &MessageEntryField::send_msg_text,
+            this, &MainWindow::send_msg_text);
 }
 
 MainWindow::~MainWindow()
@@ -52,16 +55,19 @@ void MainWindow::resizeEvent(QResizeEvent* event)
     panel_->set_coordinates(ui->dialogs_list->y(), ui->dialogs_list->width(), ui->dialogs_list->height());
 }
 
+void MainWindow::send_msg_text(const QString &text)
+{
+    emit send_message(text);
+}
+
 void MainWindow::on_new_chat_button_pressed()
 {
     chat_params_wnd_ = new ChatParamsWindow(this);
     chat_params_wnd_->show();
 }
 
-
 void MainWindow::on_chat_settings_button_pressed()
 {
     chat_params_wnd_ = new ChatParamsWindow(this);
     chat_params_wnd_->show();
 }
-

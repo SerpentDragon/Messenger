@@ -18,23 +18,29 @@ class LoginWindow : public QMainWindow
 
 public:
 
-    explicit LoginWindow(Client& client, QWidget* parent = nullptr);
+    explicit LoginWindow(QWidget* parent = nullptr);
 
     ~LoginWindow();
-
-signals:
-
-    void log_in_success();
 
 private:
 
     void setup_icons();
+
+public slots:
+
+    void process_auth_resp(SERVER_RESP_CODES resp, int id);
 
 private slots:
 
     void on_sign_up_label_linkActivated(const QString& link);
 
     void on_log_in_button_pressed();
+
+signals:
+
+    void log_in_user(bool log_in, const std::string& nickname, const std::string& password);
+
+    void log_in_success();
 
 private:
 
@@ -45,8 +51,6 @@ private:
         LOG_IN = 0,
         SIGN_UP = 1
     } state_;
-
-    Client& client_;
 };
 
 #endif // LOGINWINDOW_H

@@ -10,10 +10,13 @@ MessageEntryField::MessageEntryField(QWidget *parent)
     send_msg_ = new QPushButton(this);
 
     set_buttons_style();
-    msg_params_button_click();
+    msg_params_button_pressed();
 
     connect(msg_edit_, &AutoExpandTextEdit::change_height,
             this, &MessageEntryField::handle_height_change);
+
+    connect(send_msg_, &QPushButton::clicked,
+            this, &MessageEntryField::send_msg_button_pressed);
 }
 
 void MessageEntryField::showEvent(QShowEvent *event)
@@ -50,7 +53,7 @@ void MessageEntryField::set_buttons_geometry()
                            this->height() - button_sz_, button_sz_, button_sz_);
 }
 
-void MessageEntryField::msg_params_button_click()
+void MessageEntryField::msg_params_button_pressed()
 {
     QMenu *menu = new QMenu(this->parentWidget());
     QWidgetAction* vanishing_msg_act = new QWidgetAction(menu);
@@ -66,6 +69,14 @@ void MessageEntryField::msg_params_button_click()
         menu->popup({ point.x() - (menu->width() - msg_params_->width()) / 2 ,
                      point.y() - menu->height() });
     });
+}
+
+void MessageEntryField::send_msg_button_pressed()
+{
+    auto msg_text = msg_edit_->toPlainText();
+    msg_edit_->clear();
+
+    emit send_msg_text(msg_text);
 }
 
 void MessageEntryField::calculate_widgets_pos()

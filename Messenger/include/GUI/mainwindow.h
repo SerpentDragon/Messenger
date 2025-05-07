@@ -28,11 +28,6 @@ public:
 
     ~MainWindow();
 
-private slots:
-    void on_new_chat_button_pressed();
-
-    void on_chat_settings_button_pressed();
-
 private:
 
     void setup_panel();
@@ -40,6 +35,20 @@ private:
     void setup_icons();
 
     void resizeEvent(QResizeEvent* event);
+
+public slots:
+
+    void send_msg_text(const QString& text);
+
+private slots:
+
+    void on_new_chat_button_pressed();
+
+    void on_chat_settings_button_pressed();
+
+signals:
+
+    void send_message(const QString& text);
 
 private:
     Ui::MainWindow* ui;

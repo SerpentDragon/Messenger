@@ -8,6 +8,7 @@
 #include <boost/shared_ptr.hpp>
 
 #include <QDebug>
+#include <QObject>
 
 #include "../../../API/protocols.h"
 #include "../../../API/resp_codes.h"
@@ -16,21 +17,31 @@
 using boost::asio::ip::tcp;
 using boost::property_tree::ptree;
 
-class Client
+class Client : public QObject
 {
+    Q_OBJECT
+
 public:
 
     Client(boost::asio::io_service& io, const std::string& ip, int port);
 
     void connect();
 
-    void send_user_data(bool log_in, const std::string& nickname, const std::string& password);
-
-    SERVER_RESP_CODES get_auth_resp();
-
 private:
 
+    void get_auth_resp();
+
     void start_read();
+
+public slots:
+
+    void log_in_user(bool log_in, const std::string& nickname, const std::string& password);
+
+    void send_message(const QString& text);
+
+signals:
+
+    void auth_resp(SERVER_RESP_CODES resp, int id);
 
 private:
 

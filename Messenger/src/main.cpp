@@ -3,19 +3,22 @@
 
 #include <QApplication>
 #include <QMessageBox>
+#include <QObject>
 #include <QStackedWidget>
 
-class ClientApplication
+class ClientApplication : public QObject
 {
 public:
 
     ClientApplication(boost::asio::io_service& io) : io_(io)
     {
         client_ = std::make_unique<Client>(io_, "127.0.0.1", 1545);
-        //client_->connect();
+        client_->connect();
 
-        login_window_ = std::make_unique<LoginWindow>(*client_);
+        login_window_ = std::make_unique<LoginWindow>();
         main_window_ = std::make_unique<MainWindow>();
+
+        make_connections();
 
         create_window_set();
     }
@@ -26,8 +29,8 @@ private:
     {
         stkw_.addWidget(&*login_window_);
         stkw_.addWidget(&*main_window_);
-        // stkw_.setCurrentWidget(&*login_window_);
-        stkw_.setCurrentWidget(&*main_window_);
+        stkw_.setCurrentWidget(&*login_window_);
+        // stkw_.setCurrentWidget(&*main_window_);
 
         login_window_->setParent(&stkw_);
         main_window_->setParent(&stkw_);
@@ -46,6 +49,14 @@ private:
         });
 
         stkw_.show();
+    }
+
+    void make_connections()
+    {
+        QObject::connect(&*login_window_, &LoginWindow::log_in_user, &*client_, &Client::log_in_user);
+        QObject::connect(&*client_, &Client::auth_resp, &*login_window_, &LoginWindow::process_auth_resp);
+
+        QObject::connect(&*main_window_, &MainWindow::send_message, &*client_, &Client::send_message);
     }
 
 private:

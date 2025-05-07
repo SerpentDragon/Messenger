@@ -16,8 +16,53 @@ void Client::connect()
     qDebug() << __func__ << '\n';
 }
 
-void Client::send_user_data(bool log_in, const std::string& nickname, const std::string& password)
+void Client::get_auth_resp()
 {
+    qDebug() << __func__ << '\n';
+
+    int resp_code;
+    int id;
+
+    try
+    {
+        socket_.receive(boost::asio::buffer(recv_buffer_));
+
+        resp_code = SERVER_RESP_CODES::ERROR;
+
+        std::string resp = recv_buffer_.data();
+
+        std::stringstream ss(resp);
+        read_xml(ss, tree_);
+
+        resp_code = tree_.get<int>(SERVER_RESPONSE::status);
+        id = tree_.get<int>(SERVER_RESPONSE::id);
+
+        qDebug() << "resp: " << resp_code << '\n';
+
+        tree_.clear();
+    }
+    catch(...)
+    {
+        tree_.clear();
+        resp_code = SERVER_RESP_CODES::ERROR;
+    }
+
+    emit auth_resp(int2SRV_RSP_CD(resp_code), id);
+}
+
+void Client::start_read()
+{
+    socket_.async_receive(boost::asio::buffer(recv_buffer_),
+        [this](const boost::system::error_code& error, size_t)
+        {
+
+        });
+}
+
+void Client::log_in_user(bool log_in, const std::string& nickname, const std::string& password)
+{
+    qDebug() << nickname << ' ' << password << '\n';
+
     tree_.put(USER_DATA::log_in, log_in);
     tree_.put(USER_DATA::nickname, nickname);
     tree_.put(USER_DATA::password, Cryptographer::hash(password));
@@ -30,38 +75,21 @@ void Client::send_user_data(bool log_in, const std::string& nickname, const std:
     tree_.clear();
 
     qDebug() << __func__ << '\n';
+
+    get_auth_resp();
 }
 
-SERVER_RESP_CODES Client::get_auth_resp()
+void Client::send_message(const QString &text)
 {
-    qDebug() << __func__ << '\n';
+    tree_.put(MSG_TAGS::sender, "");
+    tree_.put(MSG_TAGS::receiver, "");
+    tree_.put(MSG_TAGS::text, text.toStdString());
 
-    try
-    {
-        socket_.receive(boost::asio::buffer(recv_buffer_));
+    std::ostringstream oss;
+    boost::property_tree::write_xml(oss, tree_);
 
-        std::string resp = recv_buffer_.data();
+    socket_.send(boost::asio::buffer(oss.str()));
 
-        std::stringstream ss(resp);
-        read_xml(ss, tree_);
-
-        int resp_code = tree_.get<int>(SERVER_RESPONSE::status);
-
-        tree_.clear();
-
-        return int2SRV_RSP_CD(resp_code);
-    }
-    catch(...)
-    {
-        return SERVER_RESP_CODES::ERROR;
-    }
+    tree_.clear();
 }
 
-void Client::start_read()
-{
-    socket_.async_receive(boost::asio::buffer(recv_buffer_),
-        [this](const boost::system::error_code& error, size_t)
-        {
-
-        });
-}
