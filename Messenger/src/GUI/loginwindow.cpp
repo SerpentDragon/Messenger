@@ -70,7 +70,16 @@ void LoginWindow::process_auth_resp(SERVER_RESP_CODES resp, int id)
         return;
     }
 
+    bool log_in = state_ == STATE::LOG_IN;
+    const std::string nickname = ui->nickname_edit->text().toStdString();
+    const std::string password = ui->password_edit->text().toStdString();
+
+    ui->nickname_edit->clear();
+    ui->password_edit->clear();
+
     emit log_in_success();
+
+    emit db_connect(log_in, id, nickname, password);
 }
 
 void LoginWindow::on_sign_up_label_linkActivated(const QString &link)
@@ -105,9 +114,6 @@ void LoginWindow::on_log_in_button_pressed()
     const std::string nickname = ui->nickname_edit->text().toStdString();
     const std::string password = ui->password_edit->text().toStdString();
 
-    ui->nickname_edit->clear();
-    ui->password_edit->clear();
-
     if (state_ == STATE::SIGN_UP)
     {
         const std::string repeated_password = ui->repeat_password_edit->text().toStdString();
@@ -123,8 +129,4 @@ void LoginWindow::on_log_in_button_pressed()
     }
 
     emit log_in_user(log_in, nickname, password);
-
-    qDebug() << "EMITTED\n";
-    
-    // client_.send_user_data(log_in, nickname, password);
 }

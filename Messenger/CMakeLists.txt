@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_AUTOUIC_SEARCH_PATHS "${CMAKE_SOURCE_DIR}/ui")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
@@ -28,6 +28,7 @@ set(PROJECT_SOURCES
     src/GUI/chatparamswindow.cpp
     src/Client/client.cpp
     src/Client/cryptographer.cpp
+    src/Client/dbmanager.cpp
     
     include/GUI/mainwindow.h
     include/GUI/loginwindow.h
@@ -38,6 +39,8 @@ set(PROJECT_SOURCES
     include/GUI/common.h
     include/Client/client.h
     include/Client/cryptographer.h
+    include/Client/dbmanager.h
+    include/common_defs.h
     
     ui/mainwindow.ui
     ui/loginwindow.ui

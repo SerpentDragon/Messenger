@@ -18,4 +18,6 @@ namespace MSG_TAGS
     inline constexpr char sender[] = "msg.sender";
     inline constexpr char receiver[] = "msg.receiver";
     inline constexpr char text[] = "msg.text";
+    inline constexpr char timestamp[] = "msg.timestamp";
+    inline constexpr char chat[] = "msg.chat";
 };

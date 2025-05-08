@@ -4,6 +4,7 @@
 #include "chatparamswindow.h"
 #include "messageentryfield.h"
 #include "slidepanel.h"
+#include "../common_defs.h"
 
 #include <QFont>
 #include <QGraphicsDropShadowEffect>
@@ -11,6 +12,8 @@
 #include <QPainter>
 #include <QStandardItem>
 #include <QWidget>
+
+using ULL = unsigned long long;
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -40,6 +43,8 @@ public slots:
 
     void send_msg_text(const QString& text);
 
+    void receive_msg(const Message& msg);
+
 private slots:
 
     void on_new_chat_button_pressed();
@@ -48,7 +53,7 @@ private slots:
 
 signals:
 
-    void send_message(const QString& text);
+    void send_message(const Message& msg);
 
 private:
     Ui::MainWindow* ui;

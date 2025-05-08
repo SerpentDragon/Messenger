@@ -1,5 +1,6 @@
 #include "../include/GUI/mainwindow.h"
 #include "../include/GUI/loginwindow.h"
+#include "../include/Client/dbmanager.h"
 
 #include <QApplication>
 #include <QMessageBox>
@@ -56,7 +57,12 @@ private:
         QObject::connect(&*login_window_, &LoginWindow::log_in_user, &*client_, &Client::log_in_user);
         QObject::connect(&*client_, &Client::auth_resp, &*login_window_, &LoginWindow::process_auth_resp);
 
-        QObject::connect(&*main_window_, &MainWindow::send_message, &*client_, &Client::send_message);
+        QObject::connect(&*login_window_, &LoginWindow::db_connect, &db_manager_, &DBManager::db_connect);
+
+        QObject::connect(&*main_window_, &MainWindow::send_message, &*client_, &Client::write);
+        QObject::connect(&*client_, &Client::send_msg, &db_manager_, &DBManager::save_msg);
+        QObject::connect(&*client_, &Client::receive_msg, &*main_window_, &MainWindow::receive_msg);
+        QObject::connect(&*client_, &Client::receive_msg, &db_manager_, &DBManager::save_msg);
     }
 
 private:
@@ -67,6 +73,8 @@ private:
     QStackedWidget stkw_;
     std::unique_ptr<LoginWindow> login_window_;
     std::unique_ptr<MainWindow> main_window_;
+
+    DBManager db_manager_;
 };
 
 int main(int argc, char *argv[])

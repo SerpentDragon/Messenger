@@ -57,7 +57,18 @@ void MainWindow::resizeEvent(QResizeEvent* event)
 
 void MainWindow::send_msg_text(const QString &text)
 {
-    emit send_message(text);
+    Message msg;
+
+    // here we should get the list of receivers
+
+    emit send_message(msg);
+}
+
+void MainWindow::receive_msg(const Message& msg)
+{
+    // here we should display in the corresponding chat
+
+    // qDebug() << sender << ' ' << msg << '\n';
 }
 
 void MainWindow::on_new_chat_button_pressed()
