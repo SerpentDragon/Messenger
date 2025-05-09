@@ -13,13 +13,34 @@ MainWindow::MainWindow(QWidget *parent)
     msg_fld_ = new MessageEntryField(ui->dialog_window);
     msg_fld_->show();
 
-    connect(msg_fld_, &MessageEntryField::send_msg_text,
-            this, &MainWindow::send_msg_text);
+    connect(msg_fld_, &MessageEntryField::send_msg,
+            this, &MainWindow::send_msg);
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::set_contacts(const std::vector<Contact> &contacts)
+{
+    QStandardItemModel* model = new QStandardItemModel(this);
+    ui->dialogs_list->setModel(model);
+
+    for(const auto& contact : contacts)
+    {
+        QStandardItem* item = new QStandardItem;
+        item->setSizeHint({ ui->dialogs_list->size().width(), 50 });
+        model->appendRow(item);
+
+        QModelIndex index = model->indexFromItem(item);
+
+        QPixmap photo(contact.picture.c_str());
+        ContactEntry* ce = new ContactEntry(photo, QString::fromStdString(contact.name),
+                                            contact.id, contact.chat);
+
+        ui->dialogs_list->setIndexWidget(index, ce);
+    }
 }
 
 void MainWindow::setup_panel()
@@ -55,9 +76,16 @@ void MainWindow::resizeEvent(QResizeEvent* event)
     panel_->set_coordinates(ui->dialogs_list->y(), ui->dialogs_list->width(), ui->dialogs_list->height());
 }
 
-void MainWindow::send_msg_text(const QString &text)
+void MainWindow::send_msg(const QString& text)
 {
-    Message msg;
+    Message msg
+    {
+        // .sender =
+        // .receiver =
+        .text = text.toStdString(),
+        .timestamp = generate_timestamp(),
+        // .chat =
+    };
 
     // here we should get the list of receivers
 
@@ -82,3 +110,9 @@ void MainWindow::on_chat_settings_button_pressed()
     chat_params_wnd_ = new ChatParamsWindow(this);
     chat_params_wnd_->show();
 }
+
+void MainWindow::on_dialog_search_edit_textChanged(const QString& text)
+{
+    // emit find_contact(text);
+}
+

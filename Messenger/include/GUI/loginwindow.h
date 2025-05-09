@@ -42,7 +42,7 @@ signals:
 
     void log_in_success();
 
-    void db_connect(bool log_in, int id, const std::string& nickname, const std::string& password);
+    void db_connect(bool log_in, int id, const std::string& nickname);
 
 private:
 

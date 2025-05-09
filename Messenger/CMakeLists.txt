@@ -26,6 +26,7 @@ set(PROJECT_SOURCES
     src/GUI/autoexpandtextedit.cpp
     src/GUI/messageentryfield.cpp
     src/GUI/chatparamswindow.cpp
+    src/GUI/contactentry.cpp
     src/Client/client.cpp
     src/Client/cryptographer.cpp
     src/Client/dbmanager.cpp
@@ -36,6 +37,7 @@ set(PROJECT_SOURCES
     include/GUI/autoexpandtextedit.h
     include/GUI/messageentryfield.h
     include/GUI/chatparamswindow.h
+    include/GUI/contactentry.h
     include/GUI/common.h
     include/Client/client.h
     include/Client/cryptographer.h

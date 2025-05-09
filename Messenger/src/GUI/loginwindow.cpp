@@ -79,7 +79,7 @@ void LoginWindow::process_auth_resp(SERVER_RESP_CODES resp, int id)
 
     emit log_in_success();
 
-    emit db_connect(log_in, id, nickname, password);
+    emit db_connect(log_in, id, nickname);
 }
 
 void LoginWindow::on_sign_up_label_linkActivated(const QString &link)

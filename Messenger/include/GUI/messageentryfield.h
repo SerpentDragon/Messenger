@@ -36,8 +36,8 @@ private slots:
     void handle_height_change(int height);
 
 signals:
-
-    void send_msg_text(const QString& text);
+    
+    void send_msg(const QString& text);
 
 private:
 

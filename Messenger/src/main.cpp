@@ -57,12 +57,19 @@ private:
         QObject::connect(&*login_window_, &LoginWindow::log_in_user, &*client_, &Client::log_in_user);
         QObject::connect(&*client_, &Client::auth_resp, &*login_window_, &LoginWindow::process_auth_resp);
 
-        QObject::connect(&*login_window_, &LoginWindow::db_connect, &db_manager_, &DBManager::db_connect);
+        QObject::connect(&*login_window_, &LoginWindow::db_connect, this, &ClientApplication::db_connect);
 
         QObject::connect(&*main_window_, &MainWindow::send_message, &*client_, &Client::write);
         QObject::connect(&*client_, &Client::send_msg, &db_manager_, &DBManager::save_msg);
         QObject::connect(&*client_, &Client::receive_msg, &*main_window_, &MainWindow::receive_msg);
         QObject::connect(&*client_, &Client::receive_msg, &db_manager_, &DBManager::save_msg);
+    }
+
+    void db_connect(bool log_in, int id, const std::string& nickname)
+    {
+        db_manager_.db_connect(log_in, id, nickname);
+
+        main_window_->set_contacts(db_manager_.get_contacts_list());
     }
 
 private:

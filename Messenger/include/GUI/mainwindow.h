@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include "chatparamswindow.h"
+#include "contactentry.h"
 #include "messageentryfield.h"
 #include "slidepanel.h"
 #include "../common_defs.h"
@@ -31,6 +32,8 @@ public:
 
     ~MainWindow();
 
+    void set_contacts(const std::vector<Contact>& contacts);
+
 private:
 
     void setup_panel();
@@ -41,7 +44,7 @@ private:
 
 public slots:
 
-    void send_msg_text(const QString& text);
+    void send_msg(const QString& text);
 
     void receive_msg(const Message& msg);
 
@@ -51,9 +54,13 @@ private slots:
 
     void on_chat_settings_button_pressed();
 
+    void on_dialog_search_edit_textChanged(const QString& text);
+
 signals:
 
     void send_message(const Message& msg);
+
+    // void find_contact(const QString& name);
 
 private:
     Ui::MainWindow* ui;

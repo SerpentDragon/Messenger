@@ -38,8 +38,6 @@ private:
 
     void read();
 
-    static ULL generate_timestamp();
-
 public slots:
 
     void log_in_user(bool log_in, const std::string& nickname, const std::string& password);
@@ -63,7 +61,6 @@ private:
 
     tcp::socket socket_;
     boost::array<char, 2100> recv_buffer_;
-    int id_;
 
     ptree tree_;
 };

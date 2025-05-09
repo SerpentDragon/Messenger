@@ -75,8 +75,8 @@ void MessageEntryField::send_msg_button_pressed()
 {
     auto msg_text = msg_edit_->toPlainText();
     msg_edit_->clear();
-
-    emit send_msg_text(msg_text);
+    
+    emit send_msg(msg_text);
 }
 
 void MessageEntryField::calculate_widgets_pos()
