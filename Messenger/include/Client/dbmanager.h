@@ -2,6 +2,7 @@
 #define DBMANAGER_H
 
 #include "../common_defs.h"
+#include "../../../API/common_structure.h"
 
 #include <format>
 #include <memory>

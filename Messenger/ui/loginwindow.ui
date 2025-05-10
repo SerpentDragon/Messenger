@@ -244,6 +244,9 @@
           <property name="text">
            <string>Log In</string>
           </property>
+          <property name="autoRepeat">
+           <bool>false</bool>
+          </property>
          </widget>
         </item>
        </layout>

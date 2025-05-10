@@ -6,6 +6,8 @@
 #include "messageentryfield.h"
 #include "slidepanel.h"
 #include "../common_defs.h"
+#include "../../../API/common_structure.h"
+#include "../../../API/protocols.h"
 
 #include <QFont>
 #include <QGraphicsDropShadowEffect>
@@ -42,11 +44,17 @@ private:
 
     void resizeEvent(QResizeEvent* event);
 
+    void clear_contacts();
+
+    void display_contacts(const std::vector<Contact>&);
+
 public slots:
 
     void send_msg(const QString& text);
 
     void receive_msg(const Message& msg);
+
+    void list_of_contacts(const QString& name, const std::vector<Contact>& contacts_from_srv);
 
 private slots:
 
@@ -54,13 +62,15 @@ private slots:
 
     void on_chat_settings_button_pressed();
 
-    void on_dialog_search_edit_textChanged(const QString& text);
+    void on_dialog_search_edit_returnPressed();
 
 signals:
 
     void send_message(const Message& msg);
 
-    // void find_contact(const QString& name);
+    void find_contact(const QString& name);
+
+    void send_system_msg(SYSTEM_MSG type, const std::vector<QString>& data);
 
 private:
     Ui::MainWindow* ui;
@@ -70,5 +80,7 @@ private:
     MessageEntryField* msg_fld_;
 
     ChatParamsWindow* chat_params_wnd_;
+
+    std::vector<Contact> contacts_;
 };
 #endif // MAINWINDOW_H

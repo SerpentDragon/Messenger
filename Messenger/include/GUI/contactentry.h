@@ -13,6 +13,8 @@ public:
 
     ContactEntry(const QPixmap& photo, const QString& name, int id, int chat, QWidget* parent = nullptr);
 
+    std::tuple<const QString&, int, int> get_data() const;
+
 private:
 
     QString name_;

@@ -13,3 +13,8 @@ ContactEntry::ContactEntry(const QPixmap& photo, const QString& name,
     QLabel* textLabel = new QLabel(name_, this);
     layout->addWidget(textLabel);
 }
+
+std::tuple<const QString&, int, int> ContactEntry::get_data() const
+{
+    return { name_, id_, chat_ };
+}

@@ -63,13 +63,22 @@ private:
         QObject::connect(&*client_, &Client::send_msg, &db_manager_, &DBManager::save_msg);
         QObject::connect(&*client_, &Client::receive_msg, &*main_window_, &MainWindow::receive_msg);
         QObject::connect(&*client_, &Client::receive_msg, &db_manager_, &DBManager::save_msg);
+
+        QObject::connect(&*main_window_, &MainWindow::send_system_msg, &*client_, &Client::send_system_msg);
+        QObject::connect(&*client_, &Client::list_of_contacts, &*main_window_, &MainWindow::list_of_contacts);
     }
 
     void db_connect(bool log_in, int id, const std::string& nickname)
     {
+        qDebug() << "PREPARE TO CONNECT\n";
+
         db_manager_.db_connect(log_in, id, nickname);
 
+        qDebug() << "CONNECTED\n";
+
         main_window_->set_contacts(db_manager_.get_contacts_list());
+
+        qDebug() << "CONTACTS ARE SET\n";
     }
 
 private:

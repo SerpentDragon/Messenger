@@ -4,6 +4,8 @@
 #include <memory>
 #include <pqxx/pqxx>
 
+#include "../../API/common_structure.h"
+
 class DB_Server_Manager
 {
 public:
@@ -17,6 +19,8 @@ public:
     std::string log_in_client(int& id, const std::string& nickname);
 
     bool sign_up_client(int& id, const std::string& nickname, const std::string& password);
+
+    std::vector<Contact> find_contact(const std::string& name);
 
 private:
 

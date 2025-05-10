@@ -20,6 +20,8 @@ LoginWindow::LoginWindow(QWidget *parent)
     ui->password_edit->setEchoMode(QLineEdit::Password);
     ui->repeat_password_edit->setEchoMode(QLineEdit::Password);
 
+    ui->log_in_button->setAutoRepeat(false);
+
     ui->sign_up_label->setTextInteractionFlags(Qt::TextBrowserInteraction);
     ui->sign_up_label->setOpenExternalLinks(false);
 
@@ -55,7 +57,7 @@ void LoginWindow::process_auth_resp(SERVER_RESP_CODES resp, int id)
             msg = "No user with that nickname!";
             break;
         case SERVER_RESP_CODES::WRONG_NICKNAME_PSSWD:
-            msg = "Wronk nickname or password!";
+            msg = "Wrong nickname or password!";
             break;
         case SERVER_RESP_CODES::NICKNAME_TAKEN:
             msg = "Nickname is already taken!";
@@ -77,9 +79,15 @@ void LoginWindow::process_auth_resp(SERVER_RESP_CODES resp, int id)
     ui->nickname_edit->clear();
     ui->password_edit->clear();
 
+    qDebug() << "START\n";
+
     emit log_in_success();
 
+    qDebug() << "LOGIN SUCCESS\n";
+
     emit db_connect(log_in, id, nickname);
+
+    qDebug() << "AUTH RESP PROCESSED\n";
 }
 
 void LoginWindow::on_sign_up_label_linkActivated(const QString &link)

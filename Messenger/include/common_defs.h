@@ -6,18 +6,11 @@
 
 struct Message
 {
+    bool system = false;
     int sender;
     int receiver;
     std::string text;
     unsigned long long timestamp;
-    int chat;
-};
-
-struct Contact
-{
-    int id;
-    std::string name;
-    std::string picture;
     int chat;
 };
 

@@ -46,12 +46,16 @@ CREATE TABLE Message
 
 select * from Personal;
 
+select * from Contact;
+
 insert into Contact
 values
-	(1, 'Ivan', ''),
+	(1, 'Ivan_CL1', ''),
 	(2, 'Kirill', ''),
 	(3, 'Anna', ''),
-	(4, 'Maria', '');
+	(4, 'Maria', ''),
+	(5, 'Ivan_CL2', ''),
+	(6, 'Ivan_CL3', '');
 
 insert into Chat
 values
@@ -61,4 +65,6 @@ values
 
 select * from Contact;
 select * from Chat;
+
+select * from Personal;
 	

@@ -15,9 +15,24 @@ namespace SERVER_RESPONSE
 
 namespace MSG_TAGS
 {
+    inline constexpr char system[] = "msg.system";
     inline constexpr char sender[] = "msg.sender";
     inline constexpr char receiver[] = "msg.receiver";
     inline constexpr char text[] = "msg.text";
     inline constexpr char timestamp[] = "msg.timestamp";
     inline constexpr char chat[] = "msg.chat";
+};
+
+namespace SYSTEM_MSG_DATA
+{
+    inline constexpr char system[] = "msg.system";
+    inline constexpr char sender[] = "msg.sender";
+    inline constexpr char cmd[] = "msg.cmd";
+    inline constexpr char data[] = "msg.data";
+    inline constexpr char contact[] = "msg.data.contact";
+};
+
+enum SYSTEM_MSG : unsigned int
+{
+    FIND_CONTACT = 1,
 };

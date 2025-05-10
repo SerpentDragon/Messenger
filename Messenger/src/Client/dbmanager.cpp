@@ -48,6 +48,8 @@ std::vector<Contact> DBManager::get_contacts_list()
         contacts.emplace_back(contact);
     }
 
+    qDebug() << "Chats are ready!\n";
+
     return contacts;
 }
 
@@ -70,6 +72,8 @@ void DBManager::db_connect(bool log_in, int id, const std::string& nickname)
 
     connect(address);
 
+    qDebug() << "INSERT INTO PERSONAL\n";
+
     if (log_in == false)
     {
         id_ = id;
@@ -84,6 +88,7 @@ void DBManager::db_connect(bool log_in, int id, const std::string& nickname)
         txn.commit();
     }
 
+    qDebug() << "INSERTED\n";
 }
 
 void DBManager::save_msg(const Message& msg)

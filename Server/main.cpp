@@ -69,6 +69,8 @@ private:
 
         std::stringstream ss(data);
         read_xml(ss, tree_);
+
+        std::cout << ss.str() << '\n';
         
         bool log_in = tree_.get<bool>(USER_DATA::log_in);
         std::string nickname = tree_.get<std::string>(USER_DATA::nickname);
@@ -90,13 +92,11 @@ private:
             {
                 resp = SERVER_RESP_CODES::OK;
             }
-
-            if (password_from_db.empty())
+            else if (password_from_db.empty())
             {
                 resp = SERVER_RESP_CODES::NO_USER_NICKNAME;
             }
-
-            if (password_from_db != password)
+            else if (password_from_db != password)
             {
                 resp = SERVER_RESP_CODES::WRONG_NICKNAME_PSSWD;
             }
@@ -106,6 +106,7 @@ private:
             if (db_manager_.sign_up_client(id, nickname, password))
             {
                 resp = SERVER_RESP_CODES::OK;
+                std::cout << "RESP: OK\n";
             }
             else
             {
@@ -130,31 +131,89 @@ private:
 
         online_clients_[id] = new_socket;
 
+        std::cout << "CLIENT ADDED!\n";
+
         start_read(id);
     }
 
     void start_read(int id)
     {
-        // auto socket = online_clients_[id];
+        auto socket = online_clients_[id];
 
-        // boost::shared_ptr<boost::array<char, msg_length_>> data(new boost::array<char, msg_length_>);
-        // memset(data->data(), 0, msg_length_);
+        boost::shared_ptr<boost::array<char, msg_length_>> data(new boost::array<char, msg_length_>);
+        memset(data->data(), 0, msg_length_);
 
-        // socket->async_receive(boost::asio::buffer(*data), 
-        //     [this, data, socket](const boost::system::error_code& ec, size_t)
-        //     {
-        //         if (!ec)
-        //         {
-        //             std::stringstream ss(data->data());
-        //             read_xml(ss, tree_);
+        socket->async_receive(boost::asio::buffer(*data), 
+            [this, data, socket, id](const boost::system::error_code& ec, size_t)
+            {
+                if (!ec)
+                {
+                    std::stringstream ss(data->data());
+                    read_xml(ss, tree_);
 
-        //             int receiver = tree_.get<int>(MSG_TAGS::receiver);
+                    std::cout << ss.str() << '\n';
 
-        //             tree_.clear();
+                    bool system = tree_.get<bool>(MSG_TAGS::system);
+                    int sender = tree_.get<int>(MSG_TAGS::sender);
 
-        //             online_clients_[receiver]->send(*data);
-        //         }
-        //     });
+                    if (system)
+                    {
+                        process_system_msg(socket, sender);
+                    }
+                    else
+                    {
+                        int receiver = tree_.get<int>(MSG_TAGS::receiver);
+
+                        online_clients_[receiver]->send(boost::asio::buffer(data->data(), data->size()), 0);
+                    }
+                    
+                    tree_.clear();
+
+                    start_read(id);
+                }
+            });
+    }
+
+    void process_system_msg(boost::shared_ptr<tcp::socket> socket, int sender)
+    {
+        int cmd = tree_.get<int>(SYSTEM_MSG_DATA::cmd);
+
+        switch(cmd)
+        {
+            case SYSTEM_MSG::FIND_CONTACT:
+            {
+                std::string name = tree_.get<std::string>(SYSTEM_MSG_DATA::contact);
+                auto contacts = db_manager_.find_contact(name);
+
+                tree_.clear();
+
+                for(const auto& c : contacts)
+                {
+                    std::cout << c.serialize() << '\n';
+                    tree_.add(SYSTEM_MSG_DATA::contact, c.serialize());
+                }
+
+                break;
+            }
+            default:
+            {
+                std::cout << "Unknown system msg!\n";
+                break;
+            }
+        }
+
+        
+        tree_.put(SYSTEM_MSG_DATA::system, true);
+        tree_.put(SYSTEM_MSG_DATA::cmd, cmd);
+        
+        std::stringstream ss;
+        boost::property_tree::write_xml(ss, tree_);
+
+        std::cout << ss.str() << '\n';
+
+        socket->send(boost::asio::buffer(ss.str()), 0);
+
+        std::cout << "SYSTEM MSG PROCESSED\n";
     }
 
 private:
