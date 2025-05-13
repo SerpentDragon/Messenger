@@ -45,7 +45,6 @@ private:
             if (current)
             {
                 stkw_.resize(current->sizeHint());
-                stkw_.setFixedSize(current->size());
             }
         });
 
