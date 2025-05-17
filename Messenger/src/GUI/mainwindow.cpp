@@ -10,8 +10,9 @@ MainWindow::MainWindow(QWidget *parent)
     setup_panel();
     setup_icons();
 
-    msg_fld_ = new MessageEntryField(ui->dialog_window);
+    msg_fld_ = new MessageEntryField(ui->messages_window);
     msg_fld_->show();
+    msg_fld_->hide();
 
     connect(msg_fld_, &MessageEntryField::send_msg,
             this, &MainWindow::send_msg);
@@ -24,13 +25,19 @@ MainWindow::~MainWindow()
 
 void MainWindow::set_contacts(const std::vector<Contact> &contacts)
 {
+    qDebug() << __func__ << '\n';
+
     contacts_ = contacts;
 
-    display_contacts(contacts_);
+    display_contacts();
+
+    qDebug() << "leave " << __func__ << '\n';
 }
 
 void MainWindow::setup_panel()
 {
+    qDebug() << __func__ << '\n';
+
     panel_ = new SlidePanel(ui->menubar->height() + ui->dialogs_list->y(),
                             ui->dialogs_list->width(), ui->dialogs_list->height(), this);
     panel_->show();
@@ -44,26 +51,50 @@ void MainWindow::setup_panel()
         else
             panel_->hide_panel();
     });
+    qDebug() << "leave " << __func__ << '\n';
 }
 
 void MainWindow::setup_icons()
 {
+    qDebug() << __func__ << '\n';
+
     ui->menu_button->setIcon(QIcon(":/main_window/main_window/menu.png"));
     ui->new_chat_button->setIcon(QIcon(":/main_window/main_window/new_chat.png"));
     ui->chat_settings_button->setIcon(QIcon(":/main_window/main_window/params.png"));
     ui->P2P_button->setIcon(QIcon(":/main_window/main_window/P2P.png"));
+
+    qDebug() << "leave " << __func__ << '\n';
 }
 
 void MainWindow::resizeEvent(QResizeEvent* event)
 {
+    qDebug() << __func__ << '\n';
+
     QWidget::resizeEvent(event);
 
     msg_fld_->calculate_widgets_pos();
     panel_->set_coordinates(ui->dialogs_list->y(), ui->dialogs_list->width(), ui->dialogs_list->height());
+
+    QAbstractItemModel* model = ui->messages_window->model();
+    if (model == nullptr) return;
+
+    for (int row = 0; row < model->rowCount(); ++row)
+    {
+        QModelIndex index = model->index(row, 0);
+        QWidget *widget = ui->messages_window->indexWidget(index);
+        if (widget)
+        {
+            widget->setFixedWidth(ui->messages_window->viewport()->width());
+        }
+    }
+
+    qDebug() << "leave " << __func__ << '\n';
 }
 
 void MainWindow::clear_contacts()
 {
+    qDebug() << __func__ << '\n';
+
     QAbstractItemModel* model = ui->dialogs_list->model();
     if (model == nullptr) return;
 
@@ -81,20 +112,45 @@ void MainWindow::clear_contacts()
     }
 
     model->removeRows(0, rowCount);
+
+    qDebug() << "leave " << __func__ << '\n';
 }
 
-void MainWindow::display_contacts(const std::vector<Contact>& contacts)
+void MainWindow::clear_messages()
+{
+    qDebug() << __func__ << '\n';
+
+    QAbstractItemModel* model = ui->messages_window->model();
+    if (model == nullptr) return;
+
+    int row_сount = model->rowCount();
+
+    for (int row = 0; row < row_сount; row++)
+    {
+        QModelIndex index = model->index(row, 0);
+        QWidget* w = ui->dialogs_list->indexWidget(index);
+        if (w)
+        {
+            ui->messages_window->setIndexWidget(index, nullptr);
+            w->deleteLater();
+        }
+    }
+
+    model->removeRows(0, row_сount);
+
+    qDebug() << "leave " << __func__ << '\n';
+}
+
+void MainWindow::display_contacts()
 {
     qDebug() << __func__ << '\n';
 
     clear_contacts();
 
-    qDebug() << "CLEARED" << '\n';
-
     QStandardItemModel* model = new QStandardItemModel(this);
     ui->dialogs_list->setModel(model);
 
-    for(const auto& contact : contacts)
+    for(const auto& contact : contacts_)
     {
         QStandardItem* item = new QStandardItem;
         item->setSizeHint({ ui->dialogs_list->size().width(), 50 });
@@ -102,75 +158,183 @@ void MainWindow::display_contacts(const std::vector<Contact>& contacts)
 
         QModelIndex index = model->indexFromItem(item);
 
-        QPixmap photo(contact.picture.c_str());
+        QPixmap photo(QString::fromStdString(contact.picture));
         ContactEntry* ce = new ContactEntry(photo, QString::fromStdString(contact.name),
                                             contact.id, contact.chat);
 
         ui->dialogs_list->setIndexWidget(index, ce);
+
+        // qDebug() << "CONTACT ENTRY: " << contact.id << ' ' << contact.name << ' ' << contact.chat << '\n';
     }
+
+    qDebug() << "leave " << __func__ << '\n';
+}
+
+void MainWindow::add_message(const ClientMessage& msg)
+{
+    qDebug() << __func__ << '\n';
+
+    Contact* contact = get_contact_from_lst();
+
+    messages_.push_back(msg);
+    msg_forms_.push_back(std::make_shared<MessageForm>(
+        &messages_.back(), messages_.back().sender == contact->name));
+
+    QStandardItemModel* model = qobject_cast<QStandardItemModel*>(ui->messages_window->model());
+    if (model == nullptr)
+    {
+        model = new QStandardItemModel(this);
+        ui->messages_window->setModel(model);
+    }
+
+    QStandardItem* item = new QStandardItem();
+    item->setSizeHint(msg_forms_.back()->sizeHint());
+    model->appendRow(item);
+
+    QModelIndex index = model->index(model->rowCount() - 1, 0);
+    ui->messages_window->setIndexWidget(index, &*msg_forms_.back());
+
+    // if (messages_.size() > max_msg_count)
+    // {
+    //     messages_.pop_back();
+    //     msg_forms_.pop_back();
+    // }
+
+    qDebug() << "leave " << __func__ << '\n';
+}
+
+void MainWindow::display_messages()
+{
+    qDebug() << __func__ << '\n';
+
+    clear_messages();
+
+    QStandardItemModel* model = new QStandardItemModel(this);
+    ui->messages_window->setModel(model);
+
+    for(int i = 0; i < messages_.size(); i++)
+    {
+        QStandardItem* item = new QStandardItem;
+        item->setSizeHint(msg_forms_[i]->sizeHint());
+        model->appendRow(item);
+
+        QModelIndex index = model->indexFromItem(item);
+        ui->messages_window->setIndexWidget(index, &*msg_forms_[i]);
+    }
+
+    ui->messages_window->scrollToBottom();
+
+    qDebug() << "leave " << __func__ << '\n';
+}
+
+Contact* MainWindow::get_contact_from_lst()
+{
+    qDebug() << __func__ << '\n';
+
+    QModelIndex index = ui->dialogs_list->currentIndex();
+    int row = index.row();
+
+    return row < 0 ? nullptr : &contacts_[row];
+
+    // qDebug() << __func__ << " row = " << row << '\n';
+
+    // return contacts_[row];
 }
 
 void MainWindow::send_msg(const QString& text)
 {
-    Message msg
+    qDebug() << __func__ << '\n';
+
+    Contact* contact = get_contact_from_lst();
+
+    int client_id = contact->id;
+    int chat_id = contact->chat;
+
+    qDebug() << client_id << ' ' << contact->name << ' ' << chat_id << '\n';
+
+    SocketMessage msg
     {
-        // .sender =
-        // .receiver =
+        .receiver = chat_id == -1 ? std::vector{ client_id } : contact->participants,
         .text = text.toStdString(),
         .timestamp = generate_timestamp(),
-        // .chat =
+        .chat = chat_id
     };
 
-    // here we should get the list of receivers
+    // ClientMessage cl_msg = new ClientMessage();
 
     emit send_message(msg);
+
+    qDebug() << "leave " << __func__ << '\n';
 }
 
-void MainWindow::receive_msg(const Message& msg)
+void MainWindow::receive_msg(const ClientMessage& msg)
 {
-    // here we should display in the corresponding chat
+    qDebug() << __func__ << '\n';
 
-    // qDebug() << sender << ' ' << msg << '\n';
+    qDebug() << "Prepare to display" << msg.sender_id << ' ' << msg.text << '\n';
+
+    if (Contact* contact = get_contact_from_lst(); contact != nullptr)
+    {
+        if (!msg_fld_->isHidden() && msg.receiver_id == contact->id)
+        {
+            add_message(msg);
+        }
+    }
+
+    qDebug() << "leave " << __func__ << '\n';
 }
 
-void MainWindow::list_of_contacts(const QString& name, const std::vector<Contact>& contacts_from_srv)
+void MainWindow::list_of_contacts(const std::string& name, const std::vector<Contact>& contacts_from_srv)
 {
     std::vector<Contact> all_contacts;
 
-    QAbstractItemModel* model = ui->dialogs_list->model();
-    int rowCount = model->rowCount();
-
-    for (int row = 0; row < rowCount; ++row)
+    for(const auto& cn : contacts_)
     {
-        QModelIndex index = model->index(row, 0);
-        QWidget* widget = ui->dialogs_list->indexWidget(index);
-
-        if (widget)
+        if (QString::fromStdString(cn.name).contains(QString::fromStdString(name)))
         {
-            ContactEntry* ce = qobject_cast<ContactEntry*>(widget);
-            if (ce)
-            {
-                auto ce_data = ce->get_data();
-                auto ce_name = std::get<0>(ce_data);
-
-                if (ce_name.contains(name))
-                {
-                    all_contacts.emplace_back(
-                        Contact {
-                            .id = std::get<1>(ce_data),
-                            .name = ce_name.toStdString(),
-                            // .picture = ,
-                            .chat = std::get<2>(ce_data)
-                        });
-                }
-            }
+            all_contacts.emplace_back(cn);
         }
     }
 
     all_contacts.insert(all_contacts.end(),
                         contacts_from_srv.begin(), contacts_from_srv.end());
 
-    display_contacts(all_contacts);
+    contacts_ = all_contacts;
+
+    display_contacts();
+}
+
+void MainWindow::loaded_messages(const std::deque<ClientMessage>& msgs)
+{
+    qDebug() << __func__ << '\n';
+
+    Contact* contact = get_contact_from_lst();
+
+    ui->dialog_name_label->setText(QString::fromStdString(contact->name));
+
+    qDebug() << "SET NAME: " << contact->name << '\n';
+
+    messages_ = msgs;
+    msg_forms_.clear();
+
+    for(int i = 0; i < max_msg_count && i < messages_.size(); i++)
+    {
+        msg_forms_.emplace_back(new MessageForm(&messages_[i],
+                                                messages_[i].sender == contact->name));
+
+        // qDebug() << "Sender: " << messages_[i].sender << ' ' << contact->name << ' ' << (messages_[i].sender != contact->name) << '\n';
+
+        qDebug() << "MSG TEXT: " << messages_[i].text << '\n';
+    }
+
+    display_messages();
+
+    qDebug() << "leave " << __func__ << '\n';
+}
+
+void MainWindow::display_sent_msg(const ClientMessage &msg)
+{
+    add_message(msg);
 }
 
 void MainWindow::on_new_chat_button_pressed()
@@ -191,8 +355,31 @@ void MainWindow::on_dialog_search_edit_returnPressed()
 
     if (text.size() == 0)
     {
-        display_contacts(contacts_);
+        emit set_contacts_from_db();
     }
     else emit send_system_msg(SYSTEM_MSG::FIND_CONTACT, { text });
 }
 
+void MainWindow::on_dialogs_list_clicked(const QModelIndex& index)
+{
+    int row = index.row();
+
+    Contact contact = contacts_[row];
+
+    qDebug() << contact.id << ' ' << contact.name << ' ' << contact.chat << '\n';
+
+    if (!contact.saved_in_db)
+    {
+        qDebug() << "save contact\n";
+        emit save_contact(contact);
+    }
+
+    bool is_client = contact.id != -1;
+    int id = is_client ? contact.id : contact.chat;
+
+    emit load_messages(is_client, id);
+
+    msg_fld_->show();
+
+    qDebug() << "Index row: " << row << '\n';
+}

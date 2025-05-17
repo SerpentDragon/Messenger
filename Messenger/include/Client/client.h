@@ -27,37 +27,43 @@ public:
 
     Client(boost::asio::io_service& io, const std::string& ip, int port);
 
+    ~Client();
+
     void connect();
+
+    void start_read();
 
 private:
 
-    void get_auth_resp();
-
     void read();
 
-    boost::asio::const_buffer build_out_msg(const Message& msg);
+    void process_in_msg();
 
-    void build_in_msg(Message& msg);
+    void get_auth_resp();
 
-    void process_system_msg_respond(const std::vector<QString>& data);
+    void process_system_msg_respond();
+    
+    boost::asio::const_buffer build_out_msg(const SocketMessage& msg);
+    
+    void build_in_msg(SocketMessage& msg);
 
 public slots:
 
     void log_in_user(bool log_in, const std::string& nickname, const std::string& password);
-
-    void write(const Message& msg);
+    
+    void write(SocketMessage& msg);
 
     void send_system_msg(SYSTEM_MSG type, const std::vector<QString>& data);
 
 signals:
 
     void auth_resp(SERVER_RESP_CODES resp, int id);
+    
+    void receive_msg(const SocketMessage& msg);
+    
+    void send_msg(const SocketMessage& msg);
 
-    void receive_msg(const Message& msg);
-
-    void send_msg(const Message& msg);
-
-    void list_of_contacts(const QString& name, std::vector<Contact>& contacts);
+    void list_of_contacts(const std::string& name, const std::vector<Contact>& contacts);
 
 private:
 
@@ -68,9 +74,11 @@ private:
     int id_;
 
     tcp::socket socket_;
-    boost::array<char, 2000> recv_buffer_;
+    boost::asio::streambuf stream_buf_;
+    boost::array<char, max_msg_length> recv_buffer_;
 
     ptree tree_;
+    std::vector<QString> addl_data;
 };
 
 #endif // CLIENT_H

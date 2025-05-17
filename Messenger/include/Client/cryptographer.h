@@ -3,6 +3,7 @@
 
 #include <iomanip>
 #include <openssl/sha.h>
+#include <QString>
 #include <sstream>
 #include <string>
 
@@ -12,11 +13,11 @@ public:
 
     Cryptographer() = default;
 
-    static std::string encode(const std::string& str);
+    static std::string encode(const QString& str);
 
-    static std::string decode(const std::string& str);
+    static std::string decode(const QString& str);
 
-    static std::string hash(const std::string& str);
+    static std::string hash(const QString& str);
 
 private:
 

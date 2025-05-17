@@ -6,13 +6,13 @@
 
 #include "../../API/common_structure.h"
 
-class DB_Server_Manager
+class DBServerManager
 {
 public:
 
-    DB_Server_Manager() = default;
+    DBServerManager() = default;
 
-    ~DB_Server_Manager();
+    ~DBServerManager();
 
     void connect(const std::string& address);
 

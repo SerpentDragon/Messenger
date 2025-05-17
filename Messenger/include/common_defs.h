@@ -2,16 +2,60 @@
 #define COMMON_DEFS_H
 
 #include <chrono>
+#include <QString>
 #include <string>
 
-struct Message
+// defines for variables
+
+constexpr int max_msg_count = 20;
+
+using ULL = unsigned long long;
+
+// data structures and functions
+
+struct SocketMessage
 {
     bool system = false;
     int sender;
-    int receiver;
+    std::vector<int> receiver;
     std::string text;
-    unsigned long long timestamp;
+    ULL timestamp;
     int chat;
+};
+
+struct ClientMessage
+{
+    int id;
+    std::string sender;
+    int sender_id;
+    std::string receiver;
+    int receiver_id;
+    std::string text;
+    std::string time;
+    int chat;
+
+    explicit ClientMessage(int Id, const std::string& sndr, int sndr_id,
+        const std::string& rcvr, int rcvr_id, const std::string& txt, ULL tm, int cht)
+        : id(Id), sender(sndr), sender_id(sndr_id), receiver(rcvr),
+        receiver_id(rcvr_id), text(txt), chat(cht)
+    {
+        build_timestamp(tm);
+    }
+
+private:
+
+    void build_timestamp(ULL tm)
+    {
+        std::chrono::milliseconds ms(tm);
+        std::chrono::time_point<std::chrono::system_clock> tp(ms);
+        std::time_t time_type = std::chrono::system_clock::to_time_t(tp);
+        std::tm* local_tm = std::localtime(&time_type);
+
+        std::ostringstream oss;
+        oss << std::put_time(local_tm, "%d.%m.%Y %H:%M");
+
+        this->time = oss.str();
+    }
 };
 
 static unsigned long long generate_timestamp()

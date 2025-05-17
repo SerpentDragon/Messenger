@@ -2,6 +2,14 @@
 
 #include <string>
 #include <sstream>
+#include <vector>
+
+// defines
+
+constexpr inline int max_msg_length = 5000;
+constexpr inline char msg_end[] = "<END>";
+
+// structures
 
 struct Contact
 {
@@ -9,12 +17,14 @@ struct Contact
     std::string name;
     std::string picture;
     int chat;
+    std::vector<int> participants;
+    bool saved_in_db;
 
     inline std::string serialize(char delimiter = ';') const
     {
         std::ostringstream oss;
         oss << id << delimiter 
-            << name << delimiter 
+            << name << delimiter
             << picture << delimiter
             << chat;
 

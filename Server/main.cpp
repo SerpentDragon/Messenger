@@ -4,21 +4,26 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/shared_ptr.hpp>
 #include <iostream>
-#include <map>
 #include <pqxx/pqxx>
 #include <sstream>
+#include <unordered_map>
 
 #include "DB_Manager/database.h"
+#include "ServerUtils/messagequeue.h"
 #include "../API/resp_codes.h"
 #include "../API/protocols.h"
-
-#include <iostream>
+#include "../API/common_structure.h"
 
 using boost::asio::ip::tcp;
 using boost::property_tree::ptree;
 
 class Server
 {
+private:
+
+    using BUFFER = boost::shared_ptr<boost::array<char, max_msg_length>>;
+    using SOCKET = boost::shared_ptr<tcp::socket>;
+
 public:
 
     Server(boost::asio::io_service& io, const int port) :
@@ -35,7 +40,7 @@ private:
     {
         std::cout << __func__ << '\n';
 
-        boost::shared_ptr<tcp::socket> new_socket(new tcp::socket(io_));
+        SOCKET new_socket(new tcp::socket(io_));
 
         acceptor_.async_accept(*new_socket,
             [this, new_socket](const boost::system::error_code& ec)
@@ -45,12 +50,12 @@ private:
             });
     }
 
-    void handle_accept(boost::shared_ptr<tcp::socket> new_socket)
+    void handle_accept(SOCKET new_socket)
     {
         std::cout << __func__ << '\n';
 
-        boost::shared_ptr<boost::array<char, msg_length_>> data(new boost::array<char, msg_length_>);
-        memset(data->data(), 0, msg_length_);
+        BUFFER data(new boost::array<char, max_msg_length>);
+        memset(data->data(), 0, max_msg_length);
         
         new_socket->async_receive(boost::asio::buffer(*data),
             [this, data, new_socket](const boost::system::error_code& ec, size_t)
@@ -63,7 +68,7 @@ private:
         start_accept();
     }
 
-    void add_client(boost::shared_ptr<tcp::socket> new_socket, const std::string& data)
+    void add_client(SOCKET new_socket, const std::string& data)
     {
         std::cout << __func__ << '\n';
 
@@ -118,6 +123,7 @@ private:
 
         std::ostringstream oss;
         boost::property_tree::write_xml(oss, tree_);
+        oss << msg_end;
 
         new_socket->send(boost::asio::buffer(oss.str()), 0);
 
@@ -133,48 +139,84 @@ private:
 
         std::cout << "CLIENT ADDED!\n";
 
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        check_msg_queue(id);
+
         start_read(id);
+    }
+
+    void check_msg_queue(int id)
+    {
+        if (!MessageQueue::get_queue().check_msg_queue(id)) 
+        {
+            std::cout << "MSG QUEUE IS EMPTY!\n";
+            return;
+        }
+
+        std::cout << "READ MSG QUEUE!\n";
+        while (true)
+        {
+            auto opt_data = MessageQueue::get_queue().get_next_msg(id);
+            if (!opt_data) break;
+            
+            BUFFER data = *opt_data;
+            std::string msg = data->data() + std::string(msg_end);
+            online_clients_[id]->send(boost::asio::buffer(msg), 0);
+        }
     }
 
     void start_read(int id)
     {
         auto socket = online_clients_[id];
 
-        boost::shared_ptr<boost::array<char, msg_length_>> data(new boost::array<char, msg_length_>);
-        memset(data->data(), 0, msg_length_);
+        BUFFER data(new boost::array<char, max_msg_length>);
+        memset(data->data(), 0, max_msg_length);
 
         socket->async_receive(boost::asio::buffer(*data), 
             [this, data, socket, id](const boost::system::error_code& ec, size_t)
             {
                 if (!ec)
                 {
-                    std::stringstream ss(data->data());
-                    read_xml(ss, tree_);
-
-                    std::cout << ss.str() << '\n';
-
-                    bool system = tree_.get<bool>(MSG_TAGS::system);
-                    int sender = tree_.get<int>(MSG_TAGS::sender);
-
-                    if (system)
-                    {
-                        process_system_msg(socket, sender);
-                    }
-                    else
-                    {
-                        int receiver = tree_.get<int>(MSG_TAGS::receiver);
-
-                        online_clients_[receiver]->send(boost::asio::buffer(data->data(), data->size()), 0);
-                    }
-                    
-                    tree_.clear();
-
-                    start_read(id);
+                    process_incoming_msg(socket, data, id);
+                }
+                else if (ec == boost::asio::error::eof) // if the client logged out
+                {
+                    online_clients_.erase(id);
+                }
+                else
+                {
+                    std::cerr << ec.what() << '\n';
                 }
             });
     }
 
-    void process_system_msg(boost::shared_ptr<tcp::socket> socket, int sender)
+    void process_incoming_msg(SOCKET socket, BUFFER data, int id)
+    {
+        std::cout << "MESSAGE RECEIVED FROM " << id << '\n';
+
+        std::stringstream ss(data->data());
+        std::cout << ss.str() << '\n';
+        read_xml(ss, tree_);
+        
+        bool system = tree_.get<bool>(MSG_TAGS::system);
+        int sender = tree_.get<int>(MSG_TAGS::sender);
+
+        if (system)
+        {
+            process_system_msg(socket, sender);
+        }
+        else
+        {
+            process_user_msg(data);
+        }
+        
+        tree_.clear();
+
+        start_read(id);
+    }
+
+    void process_system_msg(SOCKET socket, int sender)
     {
         int cmd = tree_.get<int>(SYSTEM_MSG_DATA::cmd);
 
@@ -208,12 +250,47 @@ private:
         
         std::stringstream ss;
         boost::property_tree::write_xml(ss, tree_);
+        ss << msg_end;
 
         std::cout << ss.str() << '\n';
 
         socket->send(boost::asio::buffer(ss.str()), 0);
 
         std::cout << "SYSTEM MSG PROCESSED\n";
+    }
+
+    void process_user_msg(BUFFER data)
+    {
+        std::vector<int> receivers;
+            
+        for(const auto& child : tree_.get_child(MSG_TAGS::msg))
+        {
+            if (child.first == "receiver")
+            {
+                int val = child.second.get<int>("");
+                receivers.emplace_back(val);
+            }
+        }
+
+        for(int recv : receivers)
+        {
+            try
+            {
+                if (online_clients_.contains(recv))
+                {
+                    std::string msg = data->data() + std::string(msg_end);
+                    online_clients_[recv]->send(boost::asio::buffer(msg), 0);
+                }
+                else
+                {
+                    MessageQueue::get_queue().add_msg(recv, data);
+                }
+            }
+            catch(const std::exception& e)
+            {
+                continue;
+            }
+        }
     }
 
 private:
@@ -229,12 +306,10 @@ private:
     boost::asio::io_service& io_;
     tcp::acceptor acceptor_;
 
-    std::map<int, boost::shared_ptr<tcp::socket>> online_clients_;
+    std::unordered_map<int, SOCKET> online_clients_;
 
-    DB_Server_Manager db_manager_;
+    DBServerManager db_manager_;
     ptree tree_;
-
-    static constexpr int msg_length_ = 2000;
 };
 
 int main()

@@ -4,11 +4,13 @@
 #include "chatparamswindow.h"
 #include "contactentry.h"
 #include "messageentryfield.h"
+#include "messageform.h"
 #include "slidepanel.h"
 #include "../common_defs.h"
 #include "../../../API/common_structure.h"
 #include "../../../API/protocols.h"
 
+#include <deque>
 #include <QFont>
 #include <QGraphicsDropShadowEffect>
 #include <QMainWindow>
@@ -46,15 +48,27 @@ private:
 
     void clear_contacts();
 
-    void display_contacts(const std::vector<Contact>&);
+    void clear_messages();
+
+    void display_contacts();
+
+    void add_message(const ClientMessage& msg);
+
+    void display_messages();
+
+    Contact* get_contact_from_lst();
 
 public slots:
 
     void send_msg(const QString& text);
 
-    void receive_msg(const Message& msg);
+    void receive_msg(const ClientMessage& msg);
 
-    void list_of_contacts(const QString& name, const std::vector<Contact>& contacts_from_srv);
+    void list_of_contacts(const std::string& name, const std::vector<Contact>& contacts_from_srv);
+
+    void loaded_messages(const std::deque<ClientMessage>& msgs);
+
+    void display_sent_msg(const ClientMessage& msg);
 
 private slots:
 
@@ -64,15 +78,24 @@ private slots:
 
     void on_dialog_search_edit_returnPressed();
 
+    void on_dialogs_list_clicked(const QModelIndex& index);
+
 signals:
 
-    void send_message(const Message& msg);
+    void send_message(SocketMessage& msg);
+
+    void set_contacts_from_db();
 
     void find_contact(const QString& name);
 
+    void save_contact(Contact& contact);
+
     void send_system_msg(SYSTEM_MSG type, const std::vector<QString>& data);
 
+    void load_messages(bool is_client, int id);
+
 private:
+
     Ui::MainWindow* ui;
 
     SlidePanel* panel_;
@@ -82,5 +105,9 @@ private:
     ChatParamsWindow* chat_params_wnd_;
 
     std::vector<Contact> contacts_;
+
+    std::deque<ClientMessage> messages_;
+    std::deque<std::shared_ptr<MessageForm>> msg_forms_;
 };
+
 #endif // MAINWINDOW_H

@@ -27,6 +27,7 @@ set(PROJECT_SOURCES
     src/GUI/messageentryfield.cpp
     src/GUI/chatparamswindow.cpp
     src/GUI/contactentry.cpp
+    src/GUI/messageform.cpp
     src/Client/client.cpp
     src/Client/cryptographer.cpp
     src/Client/dbmanager.cpp
@@ -38,6 +39,7 @@ set(PROJECT_SOURCES
     include/GUI/messageentryfield.h
     include/GUI/chatparamswindow.h
     include/GUI/contactentry.h
+    include/GUI/messageform.h
     include/GUI/common.h
     include/Client/client.h
     include/Client/cryptographer.h
@@ -48,6 +50,7 @@ set(PROJECT_SOURCES
     ui/loginwindow.ui
     ui/slidepanel.ui
     ui/chatparamswindow.ui
+    ui/messageform.ui
 
     resources/resources.qrc
 )

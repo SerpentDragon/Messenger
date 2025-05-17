@@ -15,6 +15,7 @@ public:
     {
         client_ = std::make_unique<Client>(io_, "127.0.0.1", 1545);
         client_->connect();
+        client_->start_read();
 
         login_window_ = std::make_unique<LoginWindow>();
         main_window_ = std::make_unique<MainWindow>();
@@ -60,11 +61,19 @@ private:
 
         QObject::connect(&*main_window_, &MainWindow::send_message, &*client_, &Client::write);
         QObject::connect(&*client_, &Client::send_msg, &db_manager_, &DBManager::save_msg);
-        QObject::connect(&*client_, &Client::receive_msg, &*main_window_, &MainWindow::receive_msg);
         QObject::connect(&*client_, &Client::receive_msg, &db_manager_, &DBManager::save_msg);
+        QObject::connect(&db_manager_, &DBManager::receive_msg, &*main_window_, &MainWindow::receive_msg);
+        QObject::connect(&db_manager_, &DBManager::display_sent_msg, &*main_window_, &MainWindow::display_sent_msg);
 
         QObject::connect(&*main_window_, &MainWindow::send_system_msg, &*client_, &Client::send_system_msg);
         QObject::connect(&*client_, &Client::list_of_contacts, &*main_window_, &MainWindow::list_of_contacts);
+
+        QObject::connect(&*main_window_, &MainWindow::load_messages, &db_manager_, &DBManager::load_messages);
+        QObject::connect(&db_manager_, &DBManager::loaded_messages, &*main_window_, &MainWindow::loaded_messages);
+
+        QObject::connect(&*main_window_, &MainWindow::save_contact, &db_manager_, &DBManager::save_contact);
+
+        QObject::connect(&*main_window_, &MainWindow::set_contacts_from_db, this, &ClientApplication::set_contacts_from_db);
     }
 
     void db_connect(bool log_in, int id, const std::string& nickname)
@@ -78,6 +87,11 @@ private:
         main_window_->set_contacts(db_manager_.get_contacts_list());
 
         qDebug() << "CONTACTS ARE SET\n";
+    }
+
+    void set_contacts_from_db()
+    {
+        main_window_->set_contacts(db_manager_.get_contacts_list());
     }
 
 private:

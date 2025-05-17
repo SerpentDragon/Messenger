@@ -73,8 +73,8 @@ void LoginWindow::process_auth_resp(SERVER_RESP_CODES resp, int id)
     }
 
     bool log_in = state_ == STATE::LOG_IN;
-    const std::string nickname = ui->nickname_edit->text().toStdString();
-    const std::string password = ui->password_edit->text().toStdString();
+    std::string nickname = ui->nickname_edit->text().toStdString();
+    std::string password = ui->password_edit->text().toStdString();
 
     ui->nickname_edit->clear();
     ui->password_edit->clear();
@@ -119,12 +119,12 @@ void LoginWindow::on_sign_up_label_linkActivated(const QString &link)
 void LoginWindow::on_log_in_button_pressed()
 {
     bool log_in = true;
-    const std::string nickname = ui->nickname_edit->text().toStdString();
-    const std::string password = ui->password_edit->text().toStdString();
+    std::string nickname = ui->nickname_edit->text().toStdString();
+    std::string password = ui->password_edit->text().toStdString();
 
     if (state_ == STATE::SIGN_UP)
     {
-        const std::string repeated_password = ui->repeat_password_edit->text().toStdString();
+        std::string repeated_password = ui->repeat_password_edit->text().toStdString();
         ui->repeat_password_edit->clear();
 
         if (password != repeated_password)

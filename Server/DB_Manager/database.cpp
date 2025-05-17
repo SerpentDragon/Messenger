@@ -2,12 +2,12 @@
 
 #include <iostream>
 
-DB_Server_Manager::~DB_Server_Manager()
+DBServerManager::~DBServerManager()
 {
     connection_->close();
 }
 
-void DB_Server_Manager::connect(const std::string& address)
+void DBServerManager::connect(const std::string& address)
 {
     connection_ = std::make_unique<pqxx::connection>(address);
 
@@ -17,7 +17,7 @@ void DB_Server_Manager::connect(const std::string& address)
     }
 }
 
-std::string DB_Server_Manager::log_in_client(int& id, const std::string& nickname)
+std::string DBServerManager::log_in_client(int& id, const std::string& nickname)
 {
     pqxx::work txn(*connection_);
     pqxx::result res = txn.exec("SELECT id, password FROM Client WHERE nickname = " + txn.quote(nickname));
@@ -27,7 +27,7 @@ std::string DB_Server_Manager::log_in_client(int& id, const std::string& nicknam
     return res.empty() ? "" : res[0][1].as<std::string>();
 }
 
-bool DB_Server_Manager::sign_up_client(int& id, const std::string& nickname, const std::string& password)
+bool DBServerManager::sign_up_client(int& id, const std::string& nickname, const std::string& password)
 {
     pqxx::transaction txn(*connection_);
 
@@ -54,7 +54,7 @@ bool DB_Server_Manager::sign_up_client(int& id, const std::string& nickname, con
     return true;
 }
 
-std::vector<Contact> DB_Server_Manager::find_contact(const std::string& name)
+std::vector<Contact> DBServerManager::find_contact(const std::string& name)
 {
     std::vector<Contact> contacts;
 

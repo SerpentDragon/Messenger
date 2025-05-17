@@ -4,6 +4,7 @@
 #include "../common_defs.h"
 #include "../../../API/common_structure.h"
 
+#include <deque>
 #include <format>
 #include <memory>
 #include <pqxx/pqxx>
@@ -27,17 +28,42 @@ private:
 
     void connect(const std::string& address);
 
+    void build_contacts_cash();
+
 public slots:
 
     void db_connect(bool log_in, int id, const std::string& nickname);
 
-    void save_msg(const Message& msg);
+    void save_msg(const SocketMessage& msg);
+
+    void save_contact(Contact& contact);
+
+    void load_messages(bool is_client, int id);
+
+signals:
+
+    void loaded_messages(const std::deque<ClientMessage>& msgs);
+
+    void receive_msg(const ClientMessage& msg);
+
+    void display_sent_msg(const ClientMessage& msg);
 
 private:
 
     std::unique_ptr<pqxx::connection> connection_;
 
     int id_;
+    std::string nickname_;
+
+private:
+
+    struct ContactCash
+    {
+        std::string name;
+        std::string picture;
+    };
+
+    std::unordered_map<int, ContactCash> contacts_cash_;
 };
 
 #endif // DBMANAGER_H

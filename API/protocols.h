@@ -15,6 +15,7 @@ namespace SERVER_RESPONSE
 
 namespace MSG_TAGS
 {
+    inline constexpr char msg[] = "msg";
     inline constexpr char system[] = "msg.system";
     inline constexpr char sender[] = "msg.sender";
     inline constexpr char receiver[] = "msg.receiver";

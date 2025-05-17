@@ -11,12 +11,16 @@ set(PROJECT_SOURCES
 
     DB_Manager/database.cpp
     DB_Manager/database.h
+
+    ServerUtils/messagequeue.cpp
+    ServerUtils/messagequeue.h
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE Boost::system Boost::thread Boost::program_options)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PQXX_LINK_LIBRARIES})
+target_include_directories(${PROJECT_NAME} PRIVATE ../API/)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD 20
