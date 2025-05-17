@@ -14,22 +14,6 @@ std::vector<Contact> DBManager::get_contacts_list()
     std::vector<Contact> contacts;
     pqxx::work txn(*connection_);
 
-    //  auto result = txn.exec("SELECT * FROM Contact WHERE personal_id = " + txn.quote(id_) + ";");
-    // for (const auto& row : result)
-    // {
-    //     Contact contact
-    //     {
-    //         .id = row["contact_id"].as<int>(),
-    //         .name = row["nickname"].as<std::string>(),
-    //         .picture = row["picture"].as<std::string>(),
-    //         .chat = -1,
-    //         .participants = {},
-    //         .saved_in_db = true
-    //     };
-
-    //     contacts.emplace_back(contact);
-    // }
-
     for(const auto& contact : contacts_cash_)
     {
         Contact cn
@@ -193,7 +177,7 @@ void DBManager::save_contact(Contact& contact)
 
     try
     {
-        txn.exec(" Contact VALUES(" +
+        txn.exec("INSERT INTO Contact VALUES(" +
                  txn.quote(contact.id) + ", " +
                  txn.quote(contact.name) + ", " +
                  txn.quote("") + ", " + // picutre

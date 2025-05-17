@@ -296,8 +296,13 @@ void MainWindow::list_of_contacts(const std::string& name, const std::vector<Con
         }
     }
 
-    all_contacts.insert(all_contacts.end(),
-                        contacts_from_srv.begin(), contacts_from_srv.end());
+    std::copy_if(contacts_from_srv.begin(), contacts_from_srv.end(),
+                 std::back_inserter(all_contacts),
+                 [&](const Contact& cn)
+                 {
+                     // we should't display contacts we already have once again
+                     return !std::any_of(contacts_.begin(), contacts_.end(), [&](const Contact& cnt){ return cnt.id == cn.id; });
+                 });
 
     contacts_ = all_contacts;
 

@@ -147,12 +147,6 @@ boost::asio::const_buffer Client::build_out_msg(const SocketMessage& msg)
 
 void Client::build_in_msg(SocketMessage& msg)
 {
-    // tree_.clear();
-
-    // std::stringstream ss(recv_buffer_.data());
-    // qDebug() << __func__ << ' ' << ss.str() << '\n';
-    // read_xml(ss, tree_);
-
     msg.system = tree_.get<bool>(MSG_TAGS::system);
     msg.sender = tree_.get<int>(MSG_TAGS::sender);
     for(const auto& child : tree_.get_child(MSG_TAGS::msg))
