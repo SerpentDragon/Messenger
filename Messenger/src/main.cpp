@@ -13,8 +13,12 @@ public:
 
     ClientApplication(boost::asio::io_service& io) : io_(io)
     {
+        Cryptographer::get_cryptographer()->generate_RSA_keys();
+        auto keys = Cryptographer::get_cryptographer()->serialize_RSA_keys();
+
         client_ = std::make_unique<Client>(io_, "127.0.0.1", 1545);
         client_->connect();
+        client_->send_public_key(keys.second);
         client_->start_read();
 
         login_window_ = std::make_unique<LoginWindow>();
@@ -74,6 +78,11 @@ private:
         QObject::connect(&*main_window_, &MainWindow::save_contact, &db_manager_, &DBManager::save_contact);
 
         QObject::connect(&*main_window_, &MainWindow::set_contacts_from_db, this, &ClientApplication::set_contacts_from_db);
+
+        QObject::connect(&db_manager_, &DBManager::update_keys_cash, &*client_, &Client::update_keys_cash);
+        QObject::connect(&db_manager_, &DBManager::save_public_key, &*client_, &Client::save_public_key);
+
+        QObject::connect(&*client_, &Client::add_contact, &*main_window_, &MainWindow::add_contact);
     }
 
     void db_connect(bool log_in, int id, const std::string& nickname)
@@ -81,6 +90,25 @@ private:
         qDebug() << "PREPARE TO CONNECT\n";
 
         db_manager_.db_connect(log_in, id, nickname);
+
+        std::pair<std::string,std::string> keys;
+
+        if (log_in == false)
+        {
+            Cryptographer::get_cryptographer()->generate_RSA_keys();
+            keys = Cryptographer::get_cryptographer()->serialize_RSA_keys();
+
+            db_manager_.save_RSA_keys(keys); 
+        }
+        else
+        {
+            keys = db_manager_.load_RSA_keys();
+            Cryptographer::get_cryptographer()->deserialize_RSA_keys(keys);
+
+            qDebug() << "KEY FROM DB\n" << keys.second << "\n\n";
+        }
+
+        client_->send_system_msg(SYSTEM_MSG::LOAD_RSA_KEY, { QString::fromStdString(keys.second) });
 
         qDebug() << "CONNECTED\n";
 

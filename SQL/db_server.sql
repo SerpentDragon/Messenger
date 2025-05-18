@@ -1,16 +1,27 @@
+DROP TABLE IF EXISTS SystemData;
+CREATE TABLE SystemData
+(
+	private_key TEXT NOT NULL,
+	public_key TEXT NOT NULL
+);
+
 DROP TABLE IF EXISTS Client;
 CREATE TABLE Client
 (
     id SERIAL PRIMARY KEY,
     nickname VARCHAR(50) UNIQUE NOT NULL,
+	public_key TEXT NOT NULL,
     password VARCHAR(128) NOT NULL,
 	picture VARCHAR(200)
 );
 
 delete from Client;
 
+delete from SystemData;
 
 delete from Client where nickname != 'Dmitry';
+
+select * from SystemData;
 
 select * from Client;
 

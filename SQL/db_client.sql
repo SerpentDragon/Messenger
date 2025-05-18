@@ -1,8 +1,10 @@
-DROP TABLE IF EXISTS Personal;
+DROP TABLE IF EXISTS Personal CASCADE;
 CREATE TABLE Personal 
 (
     id INT PRIMARY KEY,
     nickname VARCHAR(50) UNIQUE NOT NULL,
+	private_key TEXT NOT NULL,
+	public_key TEXT NOT NULL,
 	picture VARCHAR(200)
 );
 
@@ -11,6 +13,7 @@ CREATE TABLE Contact
 (
 	contact_id INT PRIMARY KEY,
 	nickname VARCHAR(50) UNIQUE NOT NULL,
+	public_key TEXT NOT NULL,
 	picture VARCHAR(200),
 	personal_id INT NOT NULL,
 	FOREIGN KEY (personal_id) REFERENCES Personal(id)
@@ -56,11 +59,10 @@ delete from Contact;
 delete from Chat;
 delete from ChatParticipants;
 delete from Message;
+delete from Contact;
+
 
 select * from Message;
-
-
-
 
 select * from Personal;
 

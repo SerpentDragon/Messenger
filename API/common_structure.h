@@ -4,17 +4,11 @@
 #include <sstream>
 #include <vector>
 
-// defines
-
-constexpr inline int max_msg_length = 5000;
-constexpr inline char msg_end[] = "<END>";
-
-// structures
-
 struct Contact
 {
     int id;
     std::string name;
+    std::string public_key;
     std::string picture;
     int chat;
     std::vector<int> participants;
@@ -25,6 +19,7 @@ struct Contact
         std::ostringstream oss;
         oss << id << delimiter 
             << name << delimiter
+            << public_key << delimiter
             << picture << delimiter
             << chat;
 
@@ -41,6 +36,7 @@ struct Contact
         std::getline(iss, token, delimiter);
         contact.id = std::stoi(token); token.clear();
         std::getline(iss, contact.name, delimiter);
+        std::getline(iss, contact.public_key, delimiter);
         std::getline(iss, contact.picture, delimiter);
         std::getline(iss, token, delimiter);
         contact.chat = std::stoi(token);

@@ -16,11 +16,17 @@ public:
 
     void connect(const std::string& address);
 
+    void save_RSA_keys(const std::pair<std::string, std::string>& keys);
+
     std::string log_in_client(int& id, const std::string& nickname);
 
     bool sign_up_client(int& id, const std::string& nickname, const std::string& password);
 
-    std::vector<Contact> find_contact(const std::string& name);
+    void load_RSA_key(int id, const std::string key);
+
+    std::vector<Contact> find_contact(int id, const std::string& name);
+
+    Contact get_contact(int id);
 
 private:
 

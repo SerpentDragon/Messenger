@@ -13,6 +13,7 @@
 #include <deque>
 #include <QFont>
 #include <QGraphicsDropShadowEffect>
+#include <QListView>
 #include <QMainWindow>
 #include <QPainter>
 #include <QStandardItem>
@@ -46,9 +47,7 @@ private:
 
     void resizeEvent(QResizeEvent* event);
 
-    void clear_contacts();
-
-    void clear_messages();
+    void clear_list_view(QListView* list);
 
     void display_contacts();
 
@@ -69,6 +68,8 @@ public slots:
     void loaded_messages(const std::deque<ClientMessage>& msgs);
 
     void display_sent_msg(const ClientMessage& msg);
+
+    void add_contact(const Contact& contact);
 
 private slots:
 

@@ -10,7 +10,6 @@
 #include <openssl/rsa.h>
 #include <openssl/sha.h>
 #include <memory>
-#include <QString>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -39,8 +38,6 @@ public:
     ~Cryptographer();
 
     static std::shared_ptr<Cryptographer> get_cryptographer();
-
-    static std::string hash(const QString& str);
 
     void generate_RSA_keys();
 

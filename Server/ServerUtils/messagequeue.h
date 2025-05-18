@@ -6,13 +6,13 @@
 #include <queue>
 #include <unordered_map>
 
-#include "../../API/common_structure.h"
+#include "../../API/protocols.h"
 
 class MessageQueue
 {
 private:
 
-    using BUFFER = boost::shared_ptr<boost::array<char, max_msg_length>>;
+    using BUFFER = std::vector<uint8_t>;
 
 public:
 

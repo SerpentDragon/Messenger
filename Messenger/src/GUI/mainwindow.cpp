@@ -91,11 +91,11 @@ void MainWindow::resizeEvent(QResizeEvent* event)
     qDebug() << "leave " << __func__ << '\n';
 }
 
-void MainWindow::clear_contacts()
+void MainWindow::clear_list_view(QListView* lists)
 {
     qDebug() << __func__ << '\n';
 
-    QAbstractItemModel* model = ui->dialogs_list->model();
+    QAbstractItemModel* model = lists->model();
     if (model == nullptr) return;
 
     int rowCount = model->rowCount();
@@ -103,10 +103,10 @@ void MainWindow::clear_contacts()
     for (int row = 0; row < rowCount; ++row)
     {
         QModelIndex index = model->index(row, 0);
-        QWidget* w = ui->dialogs_list->indexWidget(index);
+        QWidget* w = lists->indexWidget(index);
         if (w)
         {
-            ui->dialogs_list->setIndexWidget(index, nullptr);
+            lists->setIndexWidget(index, nullptr);
             w->deleteLater();
         }
     }
@@ -116,36 +116,11 @@ void MainWindow::clear_contacts()
     qDebug() << "leave " << __func__ << '\n';
 }
 
-void MainWindow::clear_messages()
-{
-    qDebug() << __func__ << '\n';
-
-    QAbstractItemModel* model = ui->messages_window->model();
-    if (model == nullptr) return;
-
-    int row_сount = model->rowCount();
-
-    for (int row = 0; row < row_сount; row++)
-    {
-        QModelIndex index = model->index(row, 0);
-        QWidget* w = ui->dialogs_list->indexWidget(index);
-        if (w)
-        {
-            ui->messages_window->setIndexWidget(index, nullptr);
-            w->deleteLater();
-        }
-    }
-
-    model->removeRows(0, row_сount);
-
-    qDebug() << "leave " << __func__ << '\n';
-}
-
 void MainWindow::display_contacts()
 {
     qDebug() << __func__ << '\n';
 
-    clear_contacts();
+    clear_list_view(ui->dialogs_list);
 
     QStandardItemModel* model = new QStandardItemModel(this);
     ui->dialogs_list->setModel(model);
@@ -175,6 +150,7 @@ void MainWindow::add_message(const ClientMessage& msg)
     qDebug() << __func__ << '\n';
 
     Contact* contact = get_contact_from_lst();
+    if (contact == nullptr) return;
 
     messages_.push_back(msg);
     msg_forms_.push_back(std::make_shared<MessageForm>(
@@ -194,6 +170,8 @@ void MainWindow::add_message(const ClientMessage& msg)
     QModelIndex index = model->index(model->rowCount() - 1, 0);
     ui->messages_window->setIndexWidget(index, &*msg_forms_.back());
 
+    qDebug() << msg_forms_.back()->msg->text << '\n';
+
     // if (messages_.size() > max_msg_count)
     // {
     //     messages_.pop_back();
@@ -207,7 +185,7 @@ void MainWindow::display_messages()
 {
     qDebug() << __func__ << '\n';
 
-    clear_messages();
+    clear_list_view(ui->messages_window);
 
     QStandardItemModel* model = new QStandardItemModel(this);
     ui->messages_window->setModel(model);
@@ -234,11 +212,9 @@ Contact* MainWindow::get_contact_from_lst()
     QModelIndex index = ui->dialogs_list->currentIndex();
     int row = index.row();
 
+    qDebug() << __func__ << " row = " << row << '\n';
+
     return row < 0 ? nullptr : &contacts_[row];
-
-    // qDebug() << __func__ << " row = " << row << '\n';
-
-    // return contacts_[row];
 }
 
 void MainWindow::send_msg(const QString& text)
@@ -246,6 +222,7 @@ void MainWindow::send_msg(const QString& text)
     qDebug() << __func__ << '\n';
 
     Contact* contact = get_contact_from_lst();
+    if (contact == nullptr) return;
 
     int client_id = contact->id;
     int chat_id = contact->chat;
@@ -260,8 +237,6 @@ void MainWindow::send_msg(const QString& text)
         .chat = chat_id
     };
 
-    // ClientMessage cl_msg = new ClientMessage();
-
     emit send_message(msg);
 
     qDebug() << "leave " << __func__ << '\n';
@@ -275,7 +250,8 @@ void MainWindow::receive_msg(const ClientMessage& msg)
 
     if (Contact* contact = get_contact_from_lst(); contact != nullptr)
     {
-        if (!msg_fld_->isHidden() && msg.receiver_id == contact->id)
+        qDebug() << msg.receiver_id << ' ' << contact->id << '\n';
+        if (!msg_fld_->isHidden() && msg.sender_id == contact->id)
         {
             add_message(msg);
         }
@@ -314,6 +290,7 @@ void MainWindow::loaded_messages(const std::deque<ClientMessage>& msgs)
     qDebug() << __func__ << '\n';
 
     Contact* contact = get_contact_from_lst();
+    if (contact == nullptr) return;
 
     ui->dialog_name_label->setText(QString::fromStdString(contact->name));
 
@@ -340,6 +317,15 @@ void MainWindow::loaded_messages(const std::deque<ClientMessage>& msgs)
 void MainWindow::display_sent_msg(const ClientMessage &msg)
 {
     add_message(msg);
+}
+
+void MainWindow::add_contact(const Contact& contact)
+{
+    contacts_.push_back(contact);
+
+    emit save_contact(contacts_.back());
+
+    display_contacts();
 }
 
 void MainWindow::on_new_chat_button_pressed()
@@ -388,3 +374,4 @@ void MainWindow::on_dialogs_list_clicked(const QModelIndex& index)
 
     qDebug() << "Index row: " << row << '\n';
 }
+

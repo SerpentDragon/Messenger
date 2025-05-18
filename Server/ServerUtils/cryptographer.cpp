@@ -1,9 +1,7 @@
-#include "../../include/Client/cryptographer.h"
+#include "cryptographer.h"
 
 #include <iostream>
 #include <cassert>
-
-#include <QDebug>
 
 std::shared_ptr<Cryptographer> Cryptographer::cr_ptr = nullptr;
 
@@ -11,20 +9,6 @@ Cryptographer::~Cryptographer()
 {
     if (public_key_) EVP_PKEY_free(public_key_);
     if (private_key_) EVP_PKEY_free(private_key_);
-}
-
-std::string Cryptographer::hash(const QString& str)
-{
-    QByteArray ba = str.toUtf8();
-
-    unsigned char hash[SHA512_DIGEST_LENGTH];
-    SHA512(reinterpret_cast<const unsigned char*>(ba.constData()), ba.size(), hash);
-
-    std::stringstream ss;
-    for (int i = 0; i < SHA512_DIGEST_LENGTH; ++i)
-        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
-
-    return ss.str();
 }
 
 std::shared_ptr<Cryptographer> Cryptographer::get_cryptographer()
@@ -45,10 +29,14 @@ void Cryptographer::generate_RSA_keys()
     OpenSSL_add_all_algorithms();
     ERR_load_crypto_strings();
 
+    
+
     std::cout << __func__ << '\n';
 
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr);
     if (!ctx) return;
+
+    std::cout << 0 << '\n';
 
     std::cout << 1 << '\n';
 
@@ -199,7 +187,7 @@ Cryptographer::AES_VECTOR Cryptographer::encrypt_AES(const std::string& plaintex
     full_message.insert(full_message.end(), result.aes_iv.begin(), result.aes_iv.end());
     full_message.insert(full_message.end(), result.aes_encrypted_data.begin(), result.aes_encrypted_data.end());
 
-    std::cout << "AES DATA ENCRYPT\n";
+    std::cout << "AES DATA\n";
 
     std::cout << "KEY\n";
     for(uint8_t c : result.rsa_encrypted_key) std::cout << (int)c;
@@ -218,7 +206,7 @@ Cryptographer::AES_VECTOR Cryptographer::encrypt_AES(const std::string& plaintex
 
 std::string Cryptographer::decrypt_AES(const AES_VECTOR& buffer)
 {
-    std::cout << __func__ << " public" << '\n';
+    std::cout << __func__ << '\n';
     size_t offset = 0;
     AES_VECTOR encrypted_aes_key(buffer.begin(), buffer.begin() + 256);
     offset += 256;
@@ -228,19 +216,17 @@ std::string Cryptographer::decrypt_AES(const AES_VECTOR& buffer)
 
     AES_VECTOR ciphertext(buffer.begin() + offset, buffer.end());
 
-    std::cout << "AES DATA\n";
-
     std::cout << "KEY\n";
-    for(uint8_t c : encrypted_aes_key) std::cout << (int)c << ' ';
+    for(uint8_t c : encrypted_aes_key) std::cout << std::dec << ' ' << (int)c;
     std::cout << "\n\n";
     std::cout << "IV\n";
-    for(uint8_t c : aes_iv) std::cout << (int)c << ' ';
+    for(uint8_t c : aes_iv) std::cout << ' ' << (int)c;
     std::cout << "\n\n";
-    std::cout << "AES\n";
-    for(uint8_t c : ciphertext) std::cout << (int)c << ' ';
+    std::cout << "TEXT\n";
+    for(uint8_t c : ciphertext) std::cout << ' ' << (int)c;
     std::cout << "\n\n";
 
-    std::cout << "leave " << __func__ << " public" << '\n';
+    std::cout << "leave " << __func__ << '\n';
 
     return decrypt_AES({ encrypted_aes_key, aes_iv, ciphertext });
 }
@@ -264,7 +250,7 @@ Cryptographer::generate_AES_key()
 }
 
 Cryptographer::AES_VECTOR Cryptographer::encrypt_AES_key_RSA(const Cryptographer::AES_VECTOR& aes_key,
-                                                             EVP_PKEY* recipient_pubkey)
+    EVP_PKEY* recipient_pubkey)
 {
     std::cout << __func__ << '\n';
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(recipient_pubkey, nullptr);
@@ -280,7 +266,7 @@ Cryptographer::AES_VECTOR Cryptographer::encrypt_AES_key_RSA(const Cryptographer
     EVP_PKEY_CTX_free(ctx);
 
     std::cout << "leave " << __func__ << '\n';
-
+    
     return encrypted_key;
 }
 
@@ -289,20 +275,16 @@ Cryptographer::AES_VECTOR Cryptographer::decrypt_AES_key_RSA(const Cryptographer
     std::cout << __func__ << '\n';
     AES_VECTOR decrypted_key(256);
 
-    std::cout << __func__ << 1 << '\n';
-
-    std::cout << "PRIVATE KEY\n" << private_key_ << '\n';
+    assert(private_key_ != nullptr);
 
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(private_key_, nullptr);
     if (!ctx) return {};
 
-    std::cout << __func__ << 2 << '\n';
+    std::cout << __func__ << 1 << '\n';
 
     if (EVP_PKEY_decrypt_init(ctx) <= 0) return {};
 
-    std::cout << __func__ << 3 << '\n';
-
-    // std::cout << encrypted_key << '\n';
+    std::cout << __func__ << 2 << '\n';
 
     size_t outlen = decrypted_key.size();
     if (EVP_PKEY_decrypt(ctx,
@@ -313,10 +295,11 @@ Cryptographer::AES_VECTOR Cryptographer::decrypt_AES_key_RSA(const Cryptographer
         return {};
     }
 
-    std::cout << __func__ << 4 << '\n';
+    std::cout << __func__ << 3 << '\n';
 
     EVP_PKEY_CTX_free(ctx);
     decrypted_key.resize(outlen);
+    
 
     std::cout << "leave " << __func__ << '\n';
 
@@ -328,14 +311,6 @@ Cryptographer::EncryptedPayload Cryptographer::encrypt_AES_msg(const std::string
     std::cout << __func__ << '\n';
     auto [aes_key, aes_iv] = generate_AES_key();
     auto key = encrypt_AES_key_RSA(aes_key, deserialize_public_key(pubkey));
-
-    std::cout << "DECRYPTED KEY\n";
-    for(uint8_t c : aes_key) std::cout << ' ' << (int)c;
-    std::cout << "\n\n";
-
-    std::cout << "ENCRYPTED KEY\n";
-    for(uint8_t c : key) std::cout << ' ' << (int)c;
-    std::cout << "\n\n";
 
     AES_VECTOR ciphertext(plaintext.size() + AES_BLOCK_SIZE);
     int len = 0, ciphertext_len = 0;
@@ -369,6 +344,11 @@ std::string Cryptographer::decrypt_AES(const EncryptedPayload& payload)
 {
     std::cout << __func__ << '\n';
     AES_VECTOR aes_key = decrypt_AES_key_RSA(payload.rsa_encrypted_key);
+
+    std::cout << "DECRYPTED KEY\n";
+    for(uint8_t c : aes_key) std::cout << ' ' << (int)c;
+    std::cout << "\n\n";
+    // EVP_PKEY_free(private_key_);
 
     AES_VECTOR decrypted(payload.aes_encrypted_data.size());
     int len = 0, plaintext_len = 0;

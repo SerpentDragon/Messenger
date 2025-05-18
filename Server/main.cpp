@@ -4,11 +4,13 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/shared_ptr.hpp>
 #include <iostream>
+#include <iterator>
 #include <pqxx/pqxx>
 #include <sstream>
 #include <unordered_map>
 
 #include "DB_Manager/database.h"
+#include "ServerUtils/cryptographer.h"
 #include "ServerUtils/messagequeue.h"
 #include "../API/resp_codes.h"
 #include "../API/protocols.h"
@@ -31,6 +33,13 @@ public:
     {
         db_manager_.connect("dbname=messenger_server user=dmitry password=1223684DS hostaddr=127.0.0.1 port=5432");
 
+        Cryptographer::get_cryptographer()->generate_RSA_keys();
+        std::tie(private_key_, public_key_) = Cryptographer::get_cryptographer()->serialize_RSA_keys();
+
+        std::cout << "READY TO LOAD KEYS TO DB";
+
+        db_manager_.save_RSA_keys({ private_key_, public_key_ });
+
         start_accept();
     }
 
@@ -45,12 +54,34 @@ private:
         acceptor_.async_accept(*new_socket,
             [this, new_socket](const boost::system::error_code& ec)
             {
-                if (!ec) handle_accept(new_socket);
+                if (!ec) 
+                {
+                    auto client_public_key = read_keys(new_socket);
+                    handle_accept(new_socket, client_public_key);
+                }
                 else std::cerr << "Error accepting new connection: " << ec.message() << '\n';
             });
     }
 
-    void handle_accept(SOCKET new_socket)
+    std::string read_keys(SOCKET new_socket)
+    {
+        BUFFER data(new boost::array<char, max_msg_length>);
+        memset(data->data(), 0, max_msg_length);
+
+        new_socket->send(boost::asio::buffer(public_key_));
+
+        // std::cout << "SEND SERVER PUBLIC KEY:\n" << public_key_ << "\n\n";
+
+        new_socket->receive(boost::asio::buffer(*data));
+
+        std::string client_public_key = data->data();
+
+        return client_public_key;
+
+        // std::cout << "RESEIVED CLIENT'S PUBLIC KEY:\n" << client_public_key << "\n\n";
+    }
+
+    void handle_accept(SOCKET new_socket, const std::string public_key)
     {
         std::cout << __func__ << '\n';
 
@@ -58,24 +89,35 @@ private:
         memset(data->data(), 0, max_msg_length);
         
         new_socket->async_receive(boost::asio::buffer(*data),
-            [this, data, new_socket](const boost::system::error_code& ec, size_t)
+            [this, data, new_socket, public_key](const boost::system::error_code& ec, size_t len)
             {
                 std::cout << data->data() << '\n';
-                if (!ec) add_client(new_socket, data->data());
+                if (!ec) 
+                {
+                    std::vector<uint8_t> msg(data->begin(), data->begin() + len);
+                    if (msg[0] == 0) msg.erase(msg.begin());
+
+                    for(int c : msg) std::cout << std::dec << (int)c << ' ';
+                    std::cout << '\n';
+
+                    auto result = Cryptographer::get_cryptographer()->decrypt_AES(msg);
+
+                    std::cout << "LOG IN/SIGN UP: " << result << '\n';
+
+                    add_client(new_socket, public_key, result);
+                }
                 else std::cerr << "Error receiving data: " << ec.message() << '\n';
             });
 
         start_accept();
     }
 
-    void add_client(SOCKET new_socket, const std::string& data)
+    void add_client(SOCKET new_socket, const std::string& cl_pub_key, const std::string& data)
     {
         std::cout << __func__ << '\n';
 
         std::stringstream ss(data);
         read_xml(ss, tree_);
-
-        std::cout << ss.str() << '\n';
         
         bool log_in = tree_.get<bool>(USER_DATA::log_in);
         std::string nickname = tree_.get<std::string>(USER_DATA::nickname);
@@ -92,6 +134,8 @@ private:
             std::string password_from_db = db_manager_.log_in_client(id, nickname);
 
             std::cout << "psswd_frm_db: " << password_from_db << '\n';
+            std::cout << "psswd_frm_cl: " << password << '\n';
+            std::cout << (password_from_db == password) << '\n';
 
             if (password_from_db == password)
             {
@@ -123,23 +167,23 @@ private:
 
         std::ostringstream oss;
         boost::property_tree::write_xml(oss, tree_);
-        oss << msg_end;
 
-        new_socket->send(boost::asio::buffer(oss.str()), 0);
+        std::cout << "answer to client: " << oss.str() << '\n';
 
-        tree_.clear();
+        auto encrypted = Cryptographer::get_cryptographer()->encrypt_AES(oss.str(), cl_pub_key);
+        encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end));
+
+        new_socket->send(boost::asio::buffer(encrypted));
 
         if (resp != SERVER_RESP_CODES::OK)
         {
             std::cout << "Try again\n";
-            handle_accept(new_socket);
+            handle_accept(new_socket, cl_pub_key);
         }
 
-        online_clients_[id] = new_socket;
+        online_clients_[id] = { new_socket, cl_pub_key };
 
         std::cout << "CLIENT ADDED!\n";
-
-        std::this_thread::sleep_for(std::chrono::seconds(1));
 
         check_msg_queue(id);
 
@@ -159,26 +203,42 @@ private:
         {
             auto opt_data = MessageQueue::get_queue().get_next_msg(id);
             if (!opt_data) break;
-            
-            BUFFER data = *opt_data;
-            std::string msg = data->data() + std::string(msg_end);
-            online_clients_[id]->send(boost::asio::buffer(msg), 0);
+
+            online_clients_[id].socket->send(boost::asio::buffer(*opt_data));
         }
     }
 
     void start_read(int id)
     {
-        auto socket = online_clients_[id];
+        auto socket = online_clients_[id].socket;
 
         BUFFER data(new boost::array<char, max_msg_length>);
         memset(data->data(), 0, max_msg_length);
 
         socket->async_receive(boost::asio::buffer(*data), 
-            [this, data, socket, id](const boost::system::error_code& ec, size_t)
+            [this, data, id](const boost::system::error_code& ec, size_t len)
             {
                 if (!ec)
                 {
-                    process_incoming_msg(socket, data, id);
+                    if (std::string msg_str(data->begin(), data->begin() + len);
+                        msg_str.find(recv_open_tag) != std::string::npos)
+                    {
+                        std::cout << "USER MESSAGE: " << msg_str << '\n';
+                        process_user_msg(msg_str);
+                    }
+                    else
+                    {
+                        std::vector<uint8_t> msg_data(data->begin(), data->begin() + len);
+                        if (msg_data[0] == 0) msg_data.erase(msg_data.begin());
+
+                        auto result = Cryptographer::get_cryptographer()->decrypt_AES(msg_data);
+
+                        std::cout << "START_READ: " << result << '\n';
+
+                        process_system_msg(result);
+                    }
+
+                    start_read(id);
                 }
                 else if (ec == boost::asio::error::eof) // if the client logged out
                 {
@@ -191,43 +251,41 @@ private:
             });
     }
 
-    void process_incoming_msg(SOCKET socket, BUFFER data, int id)
+    void process_system_msg(const std::string& decrypted_data)
     {
-        std::cout << "MESSAGE RECEIVED FROM " << id << '\n';
-
-        std::stringstream ss(data->data());
-        std::cout << ss.str() << '\n';
-        read_xml(ss, tree_);
-        
-        bool system = tree_.get<bool>(MSG_TAGS::system);
-        int sender = tree_.get<int>(MSG_TAGS::sender);
-
-        if (system)
-        {
-            process_system_msg(socket, sender);
-        }
-        else
-        {
-            process_user_msg(data);
-        }
-        
         tree_.clear();
 
-        start_read(id);
-    }
+        std::stringstream ss(decrypted_data);
+        std::cout << ss.str() << '\n';
+        read_xml(ss, tree_);
 
-    void process_system_msg(SOCKET socket, int sender)
-    {
         int cmd = tree_.get<int>(SYSTEM_MSG_DATA::cmd);
+        int sender = tree_.get<int>(MSG_TAGS::sender);
 
+        std::cout << "MESSAGE RECEIVED FROM " << sender << '\n';
+        
         switch(cmd)
         {
+            case SYSTEM_MSG::LOAD_RSA_KEY:
+            {
+                std::string key = tree_.get<std::string>(SYSTEM_MSG_DATA::key);
+
+                tree_.clear();
+
+                db_manager_.load_RSA_key(sender, key);
+                online_clients_[sender].public_key = key;
+
+                break;
+            }
             case SYSTEM_MSG::FIND_CONTACT:
             {
                 std::string name = tree_.get<std::string>(SYSTEM_MSG_DATA::contact);
-                auto contacts = db_manager_.find_contact(name);
 
                 tree_.clear();
+
+                std::cout << "NAME TO FIND: " << name << '\n';
+
+                auto contacts = db_manager_.find_contact(sender, name);
 
                 for(const auto& c : contacts)
                 {
@@ -237,59 +295,64 @@ private:
 
                 break;
             }
+            case SYSTEM_MSG::GET_CONTACT:
+            {
+                int id = tree_.get<int>(SYSTEM_MSG_DATA::contact);
+
+                auto contact = db_manager_.get_contact(id);
+
+                tree_.put(SYSTEM_MSG_DATA::contact, contact.serialize());
+
+                break;
+            }
             default:
             {
                 std::cout << "Unknown system msg!\n";
                 break;
             }
         }
-
-        
+   
         tree_.put(SYSTEM_MSG_DATA::system, true);
         tree_.put(SYSTEM_MSG_DATA::cmd, cmd);
         
-        std::stringstream ss;
+        ss = std::stringstream();
         boost::property_tree::write_xml(ss, tree_);
-        ss << msg_end;
 
-        std::cout << ss.str() << '\n';
+        auto encrypted = Cryptographer::get_cryptographer()->encrypt_AES(ss.str(), online_clients_[sender].public_key);
+        encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end));
 
-        socket->send(boost::asio::buffer(ss.str()), 0);
+        // std::cout << "PREPARE TO SEND---------------------------------\n" << ss.str() << 
+            // "--------------------------------------------------" << '\n';
+
+        online_clients_[sender].socket->send(boost::asio::buffer(encrypted));
 
         std::cout << "SYSTEM MSG PROCESSED\n";
     }
 
-    void process_user_msg(BUFFER data)
+    void process_user_msg(const std::string& msg)
     {
-        std::vector<int> receivers;
-            
-        for(const auto& child : tree_.get_child(MSG_TAGS::msg))
-        {
-            if (child.first == "receiver")
-            {
-                int val = child.second.get<int>("");
-                receivers.emplace_back(val);
-            }
-        }
+        std::cout << "USER MSG\n";
 
-        for(int recv : receivers)
+        auto end = msg.find(recv_close_tag);
+        std::string num = msg.substr(strlen(recv_open_tag), end - strlen(recv_open_tag));
+        int receiver = std::stoi(num);
+
+        // std::cout << receiver << '\n';
+
+        std::vector<uint8_t> client_data(msg.begin() + end + strlen(recv_close_tag), msg.end());
+        client_data.insert(client_data.end(), std::begin(msg_end), std::end(msg_end));
+
+        // std::cout << "CLIENT DATA\n";
+        // for(int c : client_data) std::cout << std::dec << c << ' ';
+        // std::cout << "\n\n";
+
+        if (online_clients_.contains(receiver))
         {
-            try
-            {
-                if (online_clients_.contains(recv))
-                {
-                    std::string msg = data->data() + std::string(msg_end);
-                    online_clients_[recv]->send(boost::asio::buffer(msg), 0);
-                }
-                else
-                {
-                    MessageQueue::get_queue().add_msg(recv, data);
-                }
-            }
-            catch(const std::exception& e)
-            {
-                continue;
-            }
+            online_clients_[receiver].socket->send(boost::asio::buffer(client_data));
+        }
+        else
+        {
+            MessageQueue::get_queue().add_msg(receiver, client_data);
         }
     }
 
@@ -303,13 +366,22 @@ private:
 
 private:
 
+    struct Client
+    {
+        SOCKET socket;
+        std::string public_key;
+    };
+
     boost::asio::io_service& io_;
     tcp::acceptor acceptor_;
 
-    std::unordered_map<int, SOCKET> online_clients_;
+    std::unordered_map<int, Client> online_clients_;
 
     DBServerManager db_manager_;
     ptree tree_;
+
+    std::string private_key_;
+    std::string public_key_;
 };
 
 int main()

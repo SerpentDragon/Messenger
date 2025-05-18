@@ -12,6 +12,7 @@ std::vector<Contact> DBManager::get_contacts_list()
     if (!connection_->is_open()) return {};
 
     std::vector<Contact> contacts;
+
     pqxx::work txn(*connection_);
 
     for(const auto& contact : contacts_cash_)
@@ -55,6 +56,30 @@ std::vector<Contact> DBManager::get_contacts_list()
     return contacts;
 }
 
+void DBManager::save_RSA_keys(const std::pair<std::string, std::string> &keys)
+{
+    pqxx::work txn(*connection_);
+
+    txn.exec("UPDATE Personal SET private_key = " +
+             txn.quote(keys.first) + ", " +
+             "public_key = " + txn.quote(keys.second) +
+             " WHERE id = " + txn.quote(id_) + ";");
+    txn.commit();
+}
+
+std::pair<std::string, std::string> DBManager::load_RSA_keys()
+{
+    pqxx::work txn(*connection_);
+
+    auto result = txn.exec("SELECT private_key, public_key FROM Personal WHERE id = " +
+             txn.quote(id_) + ";");
+
+    std::string private_key = result[0]["private_key"].as<std::string>();
+    std::string public_key = result[0]["public_key"].as<std::string>();
+
+    return { private_key, public_key };
+}
+
 void DBManager::connect(const std::string& address)
 {
     connection_ = std::make_unique<pqxx::connection>(address);
@@ -69,12 +94,14 @@ void DBManager::build_contacts_cash()
 {
     qDebug() << __func__ << '\n';
 
+    std::unordered_map<int, std::string> keys_cash;
+
     pqxx::work txn(*connection_);
 
-    auto result = txn.exec(std::string("SELECT contact_id, nickname, picture ") +
+    auto result = txn.exec(std::string("SELECT contact_id, nickname, public_key, picture ") +
              "FROM Contact WHERE personal_id = " + txn.quote(id_) + ";");
 
-    std::string qr = std::string("SELECT contact_id, nickname, picture ") +
+    std::string qr = std::string("SELECT contact_id, nickname, public_key, picture ") +
                   "FROM Contact WHERE personal_id = " + txn.quote(id_) + ";";
 
     qDebug() << "QR: " << qr << '\n';
@@ -82,13 +109,22 @@ void DBManager::build_contacts_cash()
     for (const auto& row : result)
     {
         contacts_cash_.insert({ row["contact_id"].as<int>(),
-                               { row["nickname"].as<std::string>(), row["picture"].as<std::string>() } });
+                               {
+                                row["nickname"].as<std::string>(),
+                                row["public_key"].as<std::string>(),
+                                row["picture"].as<std::string>()
+                               }
+                              });
+
+        keys_cash.insert({ row["contact_id"].as<int>(), row["public_key"].as<std::string>() });
     }
 
     for(const auto& c : contacts_cash_)
     {
         qDebug() << c.first << ' ' << c.second.name << '\n';
     }
+
+    emit update_keys_cash(keys_cash);
 
     qDebug() << "leave " << __func__ << '\n';
 }
@@ -115,6 +151,8 @@ void DBManager::db_connect(bool log_in, int id, const std::string& nickname)
         txn.exec("INSERT INTO Personal VALUES (" +
                  txn.quote(id) + ", " +
                  txn.quote(nickname) + ", " +
+                 txn.quote("private") + ", " +
+                 txn.quote("public") + ", " +
                  txn.quote("") + ");"
                  );
 
@@ -124,7 +162,7 @@ void DBManager::db_connect(bool log_in, int id, const std::string& nickname)
     qDebug() << "INSERTED\n";
 }
 
-void DBManager::save_msg(const SocketMessage& msg)
+void DBManager::save_msg(bool display, const SocketMessage& msg)
 {
     if (!connection_->is_open()) return;
     pqxx::work txn(*connection_);
@@ -162,7 +200,7 @@ void DBManager::save_msg(const SocketMessage& msg)
 
         emit receive_msg(cl_msg);
     }
-    else if (msg.sender == id_)
+    else if (msg.sender == id_ && display)
     {
         ClientMessage cl_msg = ClientMessage(new_id, nickname_, id_,
                                              contacts_cash_[msg.sender].name, id_, msg.text, msg.timestamp, msg.chat);
@@ -180,13 +218,16 @@ void DBManager::save_contact(Contact& contact)
         txn.exec("INSERT INTO Contact VALUES(" +
                  txn.quote(contact.id) + ", " +
                  txn.quote(contact.name) + ", " +
+                 txn.quote(contact.public_key) + ", " +
                  txn.quote("") + ", " + // picutre
                  txn.quote(id_) + ");");
         txn.commit();
 
         contact.saved_in_db = true;
 
-        contacts_cash_.insert({ contact.id, { contact.name, contact.picture } });
+        contacts_cash_.insert({ contact.id, { contact.name, contact.public_key, contact.picture } });
+
+        emit save_public_key(contact.id, contact.public_key);
     }
     catch(const std::exception& ex)
     {

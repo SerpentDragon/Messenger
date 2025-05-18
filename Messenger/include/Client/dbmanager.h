@@ -24,6 +24,10 @@ public:
 
     std::vector<Contact> get_contacts_list();
 
+    void save_RSA_keys(const std::pair<std::string, std::string>& keys);
+
+    std::pair<std::string, std::string> load_RSA_keys();
+
 private:
 
     void connect(const std::string& address);
@@ -34,7 +38,7 @@ public slots:
 
     void db_connect(bool log_in, int id, const std::string& nickname);
 
-    void save_msg(const SocketMessage& msg);
+    void save_msg(bool display, const SocketMessage& msg);
 
     void save_contact(Contact& contact);
 
@@ -48,6 +52,10 @@ signals:
 
     void display_sent_msg(const ClientMessage& msg);
 
+    void save_public_key(int id, const std::string& public_key);
+
+    void update_keys_cash(std::unordered_map<int, std::string> keys_cash);
+
 private:
 
     std::unique_ptr<pqxx::connection> connection_;
@@ -60,6 +68,7 @@ private:
     struct ContactCash
     {
         std::string name;
+        std::string public_key;
         std::string picture;
     };
 

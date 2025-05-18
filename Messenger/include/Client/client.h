@@ -31,13 +31,15 @@ public:
 
     void connect();
 
+    void send_public_key(const std::string& key);
+
     void start_read();
 
 private:
 
     void read();
 
-    void process_in_msg();
+    void process_in_msg(const std::string& message);
 
     void get_auth_resp();
 
@@ -55,15 +57,21 @@ public slots:
 
     void send_system_msg(SYSTEM_MSG type, const std::vector<QString>& data);
 
+    void save_public_key(int id, const std::string& public_key);
+
+    void update_keys_cash(const std::unordered_map<int, std::string>& cash);
+
 signals:
 
     void auth_resp(SERVER_RESP_CODES resp, int id);
     
-    void receive_msg(const SocketMessage& msg);
+    void receive_msg(bool, const SocketMessage& msg);
     
-    void send_msg(const SocketMessage& msg);
+    void send_msg(bool display, const SocketMessage& msg);
 
     void list_of_contacts(const std::string& name, const std::vector<Contact>& contacts);
+
+    void add_contact(const Contact& contact);
 
 private:
 
@@ -79,6 +87,10 @@ private:
 
     ptree tree_;
     std::vector<QString> addl_data;
+
+    std::string server_public_key_;
+
+    std::unordered_map<int, std::string> client_public_keys_;
 };
 
 #endif // CLIENT_H

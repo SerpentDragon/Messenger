@@ -17,6 +17,30 @@ void DBServerManager::connect(const std::string& address)
     }
 }
 
+void DBServerManager::save_RSA_keys(const std::pair<std::string, std::string>& keys)
+{
+    pqxx::work txn(*connection_);
+
+    std::cout << "TRY TO INSERT\n";
+
+    auto result = txn.exec("SELECT * FROM SystemData;");
+    if (!result.empty())
+    {
+        txn.exec("INSERT INTO SystemData (private_key, public_key) VALUES (" +
+            txn.quote(keys.first) + ", " + txn.quote(keys.second) + ");");
+    }
+    else
+    {
+        txn.exec("UPDATE SystemData set private_key = " + txn.quote(keys.first) +
+            ", public_key = " + txn.quote(keys.second) + ";");
+    }
+
+    txn.commit();
+
+    std::cout << "\n";
+
+}
+
 std::string DBServerManager::log_in_client(int& id, const std::string& nickname)
 {
     pqxx::work txn(*connection_);
@@ -33,16 +57,15 @@ bool DBServerManager::sign_up_client(int& id, const std::string& nickname, const
 
     try
     {
-        auto result = txn.exec("INSERT INTO Client (nickname, password, picture) VALUES (" +
+        auto result = txn.exec("INSERT INTO Client (nickname, public_key, password, picture) VALUES (" +
                  txn.quote(nickname) + ", " + 
+                 txn.quote("public") + ", " + 
                  txn.quote(password) + ", " + 
                  txn.quote("") + ") RETURNING id;");
 
         txn.commit();
 
         id = result[0][0].as<int>();
-
-        std::cout << "DONE: " << id << '\n';
     }
     catch(const std::exception& ex)
     {
@@ -54,22 +77,38 @@ bool DBServerManager::sign_up_client(int& id, const std::string& nickname, const
     return true;
 }
 
-std::vector<Contact> DBServerManager::find_contact(const std::string& name)
+void DBServerManager::load_RSA_key(int id, const std::string key)
+{
+    pqxx::work txn(*connection_);
+
+    txn.exec("UPDATE Client SET public_key = " + txn.quote(key) +
+        "WHERE id = " + txn.quote(id) + ";");
+    txn.commit();
+}
+
+std::vector<Contact> DBServerManager::find_contact(int id, const std::string& name)
 {
     std::vector<Contact> contacts;
 
     pqxx::work txn(*connection_);
-    pqxx::result res = txn.exec("SELECT id, nickname, picture FROM Client \
-        WHERE nickname LIKE '%" + name + "%' ORDER BY nickname LIMIT 10;");
+    pqxx::result res = txn.exec("SELECT id, nickname, public_key, picture FROM Client \
+        WHERE nickname LIKE '%" + name + "%' AND id != " + 
+        txn.quote(id) + " ORDER BY nickname LIMIT 10;");
 
     contacts.reserve(res.size());
 
     for (const auto& row : res) 
     {
         Contact contact;
+        // std::cout << __func__ << 1 << '\n';
         contact.id = row[0].as<int>();
+        // std::cout << __func__ << 2 << '\n';
         contact.name = row[1].as<std::string>();
-        contact.picture = row[2].as<std::string>();
+        // std::cout << __func__ << 3 << '\n';
+        contact.public_key = row[2].as<std::string>();
+        // std::cout << __func__ << 4 << '\n';
+        contact.picture = row[3].is_null() ? "" : row[3].as<std::string>();
+        // std::cout << __func__ << 5 << '\n';
         contact.chat = -1;
 
         std::cout << contact.id << ' ';
@@ -80,4 +119,23 @@ std::vector<Contact> DBServerManager::find_contact(const std::string& name)
     std::cout << '\n';
 
     return contacts;
+}
+
+Contact DBServerManager::get_contact(int id)
+{
+    pqxx::work txn(*connection_);
+    pqxx::result result = txn.exec("SELECT id, nickname, public_key, picture FROM Client \
+        WHERE id = " + txn.quote(id) + ";");
+
+    Contact contact;
+    if (!result.empty())
+    {
+        contact.id = result[0]["id"].as<int>();
+        contact.name = result[0]["nickname"].as<std::string>();
+        contact.public_key = result[0]["public_key"].as<std::string>();
+        contact.picture = result[0]["picture"].is_null() ? "" : result[0]["picture"].as<std::string>();
+        contact.chat = -1;
+    }
+
+    return contact;
 }

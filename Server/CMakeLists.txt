@@ -4,6 +4,7 @@ project(Server VERSION 1.0.0)
 
 find_package(Boost COMPONENTS system thread program_options REQUIRED)
 find_package(PkgConfig REQUIRED)
+find_package(OpenSSL REQUIRED)
 pkg_check_modules(PQXX REQUIRED libpqxx)
 
 set(PROJECT_SOURCES
@@ -14,12 +15,15 @@ set(PROJECT_SOURCES
 
     ServerUtils/messagequeue.cpp
     ServerUtils/messagequeue.h
+    ServerUtils/cryptographer.cpp
+    ServerUtils/cryptographer.h
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE Boost::system Boost::thread Boost::program_options)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PQXX_LINK_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 target_include_directories(${PROJECT_NAME} PRIVATE ../API/)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
