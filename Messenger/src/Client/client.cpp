@@ -121,8 +121,13 @@ void Client::process_in_msg(const std::string& message)
     SocketMessage msg;
     build_in_msg(msg);
 
+    qDebug() << "CL_PUB_K\n";
+    for(auto k : client_public_keys_) qDebug() << k.first;
+    qDebug() << "--------\n";
+
     if (!client_public_keys_.contains(msg.sender))
     {
+        qDebug() << "GET CONTACT\n";
         send_system_msg(SYSTEM_MSG::GET_CONTACT, { QString::number(msg.sender) });
     }
 
@@ -178,6 +183,7 @@ void Client::process_system_msg_respond()
     case SYSTEM_MSG::GET_CONTACT:
     {
         Contact cn = Contact::deserialize(tree_.get<std::string>(SYSTEM_MSG_DATA::contact));
+        cn.saved_in_db = true;
 
         emit add_contact(cn);
 
@@ -277,7 +283,9 @@ void Client::write(SocketMessage& msg)
 
         std::string recv_data = recv_open_tag + std::to_string(msg.receiver[i]) + recv_close_tag;
         encrypted.insert(encrypted.begin(), recv_data.begin(), recv_data.end());
+        encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
 
+        // here
         socket_.send(boost::asio::buffer(encrypted));
 
         if (i == msg.receiver.size() - 1) [[unlikely]] emit send_msg(true, msg);
@@ -314,9 +322,11 @@ void Client::send_system_msg(SYSTEM_MSG type, const std::vector<QString>& data)
     boost::property_tree::write_xml(ss, tree_);
 
     auto encrypted = Cryptographer::get_cryptographer()->encrypt_AES(ss.str(), server_public_key_);
+    encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
 
     qDebug() << "PROCESS_MSG: " << ss.str() << '\n';
 
+    // here
     socket_.send(boost::asio::buffer(encrypted));
 }
 

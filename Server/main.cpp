@@ -171,7 +171,7 @@ private:
         std::cout << "answer to client: " << oss.str() << '\n';
 
         auto encrypted = Cryptographer::get_cryptographer()->encrypt_AES(oss.str(), cl_pub_key);
-        encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end));
+        encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
 
         new_socket->send(boost::asio::buffer(encrypted));
 
@@ -185,7 +185,7 @@ private:
 
         std::cout << "CLIENT ADDED!\n";
 
-        check_msg_queue(id);
+        // check_msg_queue(id);
 
         start_read(id);
     }
@@ -212,23 +212,48 @@ private:
     {
         auto socket = online_clients_[id].socket;
 
-        BUFFER data(new boost::array<char, max_msg_length>);
-        memset(data->data(), 0, max_msg_length);
+        BUFFER data_ptr(new boost::array<char, max_msg_length>);
+        memset(data_ptr->data(), 0, max_msg_length);
 
-        socket->async_receive(boost::asio::buffer(*data), 
-            [this, data, id](const boost::system::error_code& ec, size_t len)
+        boost::asio::async_read_until(*socket, stream_buf_, msg_end,
+        [this, data_ptr, socket, id](const boost::system::error_code& ec, std::size_t bytes_transferred)
             {
                 if (!ec)
                 {
-                    if (std::string msg_str(data->begin(), data->begin() + len);
+                    std::size_t len = bytes_transferred < max_msg_length ?
+                                    bytes_transferred : max_msg_length;
+
+                    std::istream is(&stream_buf_);
+                    is.read(data_ptr->data(), len - strlen(msg_end));
+                    stream_buf_.consume(strlen(msg_end));
+
+                    // std::cout << "RECEIVED MSG:\n";
+                    // for(int c : data_ptr->) std::cout << c << ' ';
+                    // std::cout << "\n-----------------------------------------------------------------------------\n";
+
+                    std::vector<uint8_t> data2(data_ptr->begin(), 
+                        data_ptr->begin() + len);
+
+                    std::vector<uint8_t> data(data_ptr->begin(), 
+                        data_ptr->begin() + len - strlen(msg_end));
+                    if (data[0] == 0) data.erase(data.begin());
+
+                    std::cout << "RECEIVED MSG:\n";
+                    for(int c : data) std::cout << c << ' ';
+                    std::cout << "\n-----------------------------------------------------------------------------\n";
+
+                    if (std::string msg_str(data.begin(), data.begin() + len - strlen(msg_end));
                         msg_str.find(recv_open_tag) != std::string::npos)
                     {
-                        std::cout << "USER MESSAGE: " << msg_str << '\n';
+                        // std::cout << "USER MESSAGE: " << msg_str << '\n';
+                        // std::cout << "RECEIVED USER MSG:\n";
+                        // for(int c : msg_str) std::cout << c << ' ';
+                        // std::cout << "\n-----------------------------------------------------------------------------\n";
                         process_user_msg(msg_str);
                     }
                     else
                     {
-                        std::vector<uint8_t> msg_data(data->begin(), data->begin() + len);
+                        std::vector<uint8_t> msg_data(data.begin(), data.begin() + len - strlen(msg_end));
                         if (msg_data[0] == 0) msg_data.erase(msg_data.begin());
 
                         auto result = Cryptographer::get_cryptographer()->decrypt_AES(msg_data);
@@ -248,7 +273,9 @@ private:
                 {
                     std::cerr << ec.what() << '\n';
                 }
-            });
+                
+            }
+        );
     }
 
     void process_system_msg(const std::string& decrypted_data)
@@ -256,7 +283,7 @@ private:
         tree_.clear();
 
         std::stringstream ss(decrypted_data);
-        std::cout << ss.str() << '\n';
+        std::cout << "\"" << ss.str() << "\"\n";
         read_xml(ss, tree_);
 
         int cmd = tree_.get<int>(SYSTEM_MSG_DATA::cmd);
@@ -274,6 +301,8 @@ private:
 
                 db_manager_.load_RSA_key(sender, key);
                 online_clients_[sender].public_key = key;
+
+                check_msg_queue(sender);
 
                 break;
             }
@@ -319,10 +348,10 @@ private:
         boost::property_tree::write_xml(ss, tree_);
 
         auto encrypted = Cryptographer::get_cryptographer()->encrypt_AES(ss.str(), online_clients_[sender].public_key);
-        encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end));
+        encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
 
-        // std::cout << "PREPARE TO SEND---------------------------------\n" << ss.str() << 
-            // "--------------------------------------------------" << '\n';
+        std::cout << "PREPARE TO SEND---------------------------------\n" << ss.str() << 
+            "--------------------------------------------------" << '\n';
 
         online_clients_[sender].socket->send(boost::asio::buffer(encrypted));
 
@@ -340,7 +369,7 @@ private:
         // std::cout << receiver << '\n';
 
         std::vector<uint8_t> client_data(msg.begin() + end + strlen(recv_close_tag), msg.end());
-        client_data.insert(client_data.end(), std::begin(msg_end), std::end(msg_end));
+        client_data.insert(client_data.end(), std::begin(msg_end), std::end(msg_end) - 1);
 
         // std::cout << "CLIENT DATA\n";
         // for(int c : client_data) std::cout << std::dec << c << ' ';
@@ -374,6 +403,8 @@ private:
 
     boost::asio::io_service& io_;
     tcp::acceptor acceptor_;
+
+    boost::asio::streambuf stream_buf_;
 
     std::unordered_map<int, Client> online_clients_;
 

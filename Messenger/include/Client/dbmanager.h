@@ -40,7 +40,7 @@ public slots:
 
     void save_msg(bool display, const SocketMessage& msg);
 
-    void save_contact(Contact& contact);
+    void save_contact(const Contact& contact);
 
     void load_messages(bool is_client, int id);
 

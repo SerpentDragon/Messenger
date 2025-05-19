@@ -119,7 +119,10 @@ private:
 
     void set_contacts_from_db()
     {
-        main_window_->set_contacts(db_manager_.get_contacts_list());
+        auto list = db_manager_.get_contacts_list();
+        for(auto c : list) qDebug() << c.id << c.name;
+        qDebug() << "ALLES\n";
+        main_window_->set_contacts(list);
     }
 
 private:

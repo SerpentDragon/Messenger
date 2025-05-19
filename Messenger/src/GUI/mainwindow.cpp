@@ -322,6 +322,7 @@ void MainWindow::display_sent_msg(const ClientMessage &msg)
 void MainWindow::add_contact(const Contact& contact)
 {
     contacts_.push_back(contact);
+    contacts_.back().saved_in_db = true;
 
     emit save_contact(contacts_.back());
 
@@ -349,6 +350,7 @@ void MainWindow::on_dialog_search_edit_returnPressed()
 
     if (text.size() == 0)
     {
+        qDebug() << "GET CONTACTS FROM DB\n";
         emit set_contacts_from_db();
     }
     else emit send_system_msg(SYSTEM_MSG::FIND_CONTACT, { text });
@@ -364,6 +366,7 @@ void MainWindow::on_dialogs_list_clicked(const QModelIndex& index)
 
     if (!contact.saved_in_db)
     {
+        contact.saved_in_db = true;
         qDebug() << "save contact\n";
         emit save_contact(contact);
     }

@@ -15,6 +15,10 @@ std::vector<Contact> DBManager::get_contacts_list()
 
     pqxx::work txn(*connection_);
 
+    qDebug() << "CONTACTS CASH 1\n";
+    for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
+    qDebug() << "-------------\n";
+
     for(const auto& contact : contacts_cash_)
     {
         Contact cn
@@ -106,8 +110,13 @@ void DBManager::build_contacts_cash()
 
     qDebug() << "QR: " << qr << '\n';
 
+    qDebug() << "CONTACTS CASH 2\n";
+    for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
+    qDebug() << "-------------\n";
+
     for (const auto& row : result)
     {
+
         contacts_cash_.insert({ row["contact_id"].as<int>(),
                                {
                                 row["nickname"].as<std::string>(),
@@ -116,13 +125,16 @@ void DBManager::build_contacts_cash()
                                }
                               });
 
+        qDebug() << "CONTACTS CASH 3\n";
+        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
+        qDebug() << "-------------\n";
+
         keys_cash.insert({ row["contact_id"].as<int>(), row["public_key"].as<std::string>() });
     }
 
-    for(const auto& c : contacts_cash_)
-    {
-        qDebug() << c.first << ' ' << c.second.name << '\n';
-    }
+    qDebug() << "CONTACTS CASH 4\n";
+    for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
+    qDebug() << "-------------\n";
 
     emit update_keys_cash(keys_cash);
 
@@ -165,8 +177,10 @@ void DBManager::db_connect(bool log_in, int id, const std::string& nickname)
 void DBManager::save_msg(bool display, const SocketMessage& msg)
 {
     if (!connection_->is_open()) return;
+
     pqxx::work txn(*connection_);
     pqxx::result result;
+    int receiver;
 
     for(int recv : msg.receiver)
     {
@@ -183,6 +197,7 @@ void DBManager::save_msg(bool display, const SocketMessage& msg)
         try
         {
             result = txn.exec(qr);
+            receiver = recv;
             txn.commit();
         } catch (const std::exception& ex)
         {
@@ -195,21 +210,33 @@ void DBManager::save_msg(bool display, const SocketMessage& msg)
 
     if (msg.receiver[0] == id_)
     {
+        qDebug() << "CONTACTS CASH 5\n";
+        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
+        qDebug() << "-------------\n";
         ClientMessage cl_msg = ClientMessage(new_id, contacts_cash_[msg.sender].name, msg.sender,
                                              nickname_, id_, msg.text, msg.timestamp, msg.chat);
+        qDebug() << "CONTACTS CASH 6\n";
+        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
+        qDebug() << "-------------\n";
 
         emit receive_msg(cl_msg);
     }
     else if (msg.sender == id_ && display)
     {
+        qDebug() << "CONTACTS CASH 7\n";
+        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
+        qDebug() << "-------------\n";
         ClientMessage cl_msg = ClientMessage(new_id, nickname_, id_,
-                                             contacts_cash_[msg.sender].name, id_, msg.text, msg.timestamp, msg.chat);
-
+                                             contacts_cash_[receiver].name, receiver, msg.text,
+                                             msg.timestamp, msg.chat);
+        qDebug() << "CONTACTS CASH 7\n";
+        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
+        qDebug() << "-------------\n";
         emit display_sent_msg(cl_msg);
     }
 }
 
-void DBManager::save_contact(Contact& contact)
+void DBManager::save_contact(const Contact& contact)
 {
     pqxx::work txn(*connection_);
 
@@ -223,9 +250,15 @@ void DBManager::save_contact(Contact& contact)
                  txn.quote(id_) + ");");
         txn.commit();
 
-        contact.saved_in_db = true;
+        qDebug() << "CONTACTS CASH 8\n";
+        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
+        qDebug() << "-------------\n";
 
-        contacts_cash_.insert({ contact.id, { contact.name, contact.public_key, contact.picture } });
+        contacts_cash_[contact.id] = { contact.name, contact.public_key, contact.picture };
+
+        qDebug() << "CONTACTS CASH 8\n";
+        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
+        qDebug() << "-------------\n";
 
         emit save_public_key(contact.id, contact.public_key);
     }

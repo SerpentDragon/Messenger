@@ -89,7 +89,7 @@ signals:
 
     void find_contact(const QString& name);
 
-    void save_contact(Contact& contact);
+    void save_contact(const Contact& contact);
 
     void send_system_msg(SYSTEM_MSG type, const std::vector<QString>& data);
 

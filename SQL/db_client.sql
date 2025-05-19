@@ -11,11 +11,12 @@ CREATE TABLE Personal
 DROP TABLE IF EXISTS Contact CASCADE;
 CREATE TABLE Contact
 (
-	contact_id INT PRIMARY KEY,
-	nickname VARCHAR(50) UNIQUE NOT NULL,
+	contact_id INT,
+	nickname VARCHAR(50) NOT NULL,
 	public_key TEXT NOT NULL,
 	picture VARCHAR(200),
 	personal_id INT NOT NULL,
+	PRIMARY KEY (contact_id, personal_id),
 	FOREIGN KEY (personal_id) REFERENCES Personal(id)
 );
 
@@ -61,10 +62,44 @@ delete from ChatParticipants;
 delete from Message;
 delete from Contact;
 
+select contact_id, nickname, personal_id from Contact;
 
 select * from Message;
 
 select * from Personal;
+
+
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2/aadyY0pBAiKZmJQRGp
+NtFPUlWUdu5byXmgLQJQmCYkNhxmqj5UzB3kXTomGXTgsBsl4mXagcBGMO/k79TU
+XeJM30J4ePhosaGhLTuVLmUO4DLUKNyTZz9lysN5o3UYHoOTJqB4xC6xT/K4tiAS
+djN9IZGsk9G2yG8vsTEMbaZKaCbkNKpp7r2DK3zaiuRtvf9ljeChiLJyiFXtHAGq
+eL9PQYDNBdq1JrcwgN0GppQb6+xzRNp3Luw0qExdsKJ6Uj85AfAkUG+CmYcl0P6J
+0oeBbfqQsZVAe4YP6AihauQ5hWG1eCRKP10Ow/nGCTyGBRkJ981/PdnEPw5369yA
+MQIDAQAB
+-----END PUBLIC KEY-----
+
+
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqXg0n5QcgPuREJPTT/Ta
+oP0K5tvGn/a8MmLPjAnrr0V4K5n+4eIx8itr5tQEUNUgVaolXScsmXZOOiANjjBE
+qGrGdH/QO6ysw+FItQJAdDg/8nGTreqaAeARW5I4zAJPKcW7tzRD6fkD8Xdt9VEI
+qH7E5unzZQ0lpe7DQE9NEFx0E5A8+FykyVqNYm9Lql9IA7m30OZJbncEszKMZT14
+53GumCUIFMr5uZ6juDrM4lFzAbrS4CW1D/V9Gj68fji5GW8fo2T4azXtaM149DQA
+8BLUaZQLkpGBAUL7QBxNAecqBfwDA0cXxUXEPIeGHEIi5dwo8ICQEImGPB2sTmMY
+AQIDAQAB
+-----END PUBLIC KEY-----
+
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqFJyVHSPHLakPYe6ADTy
+4JnUKmi3ZNaBsTWGQaw8fY/6pzlsfuJh0fWy7lIW+ZCvw0hFVlBMcE8GH9yWN0xD
+hm5Rs759R5YXKOQpbhuLUqqeyNZxD9aDmMPxv4xQ0OX+wh/3lmK9Ccg0MhutuBzH
+fQltYJfy1lTqKjy0/2SYIdDtUR+d+YBn+whcjrWXiMOKLTgiFnqn6S4fXstXRMAv
+b3wdBi4OQ8PuanBcFlsxhFs/qLTLLlnAj5U2hl+8YcI+r7C4FaGs7DA9lNxOOapU
+KoxdGl7QKDZXjHqeoQu6PBBM7tC5IwHSp1yG8svbv4621QWtK1GzKAgeoFBYYKqE
+cQIDAQAB
+-----END PUBLIC KEY-----
+
 
 select * from Contact;
 
