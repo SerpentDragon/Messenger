@@ -19,7 +19,7 @@ public:
 
     ~MessageForm();
 
-public:
+private:
 
     Ui::MessageForm* ui;
 

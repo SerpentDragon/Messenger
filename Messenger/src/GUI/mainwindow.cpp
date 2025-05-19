@@ -170,7 +170,7 @@ void MainWindow::add_message(const ClientMessage& msg)
     QModelIndex index = model->index(model->rowCount() - 1, 0);
     ui->messages_window->setIndexWidget(index, &*msg_forms_.back());
 
-    qDebug() << msg_forms_.back()->msg->text << '\n';
+    // qDebug() << msg_forms_.back()->msg->text << '\n';
 
     // if (messages_.size() > max_msg_count)
     // {
@@ -331,6 +331,9 @@ void MainWindow::add_contact(const Contact& contact)
 void MainWindow::on_new_chat_button_pressed()
 {
     chat_params_wnd_ = new ChatParamsWindow(this);
+    chat_params_wnd_->display_contacts(contacts_);
+
+
     chat_params_wnd_->show();
 }
 
