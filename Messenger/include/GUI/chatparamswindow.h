@@ -40,6 +40,10 @@ private slots:
 
     void on_CANCEL_button_pressed();
 
+signals:
+
+    void create_new_chat(const QString& name, qint64 time, const std::vector<int>& members);
+
 private:
 
     Ui::ChatParamsWindow *ui;

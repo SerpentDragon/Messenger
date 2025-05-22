@@ -39,6 +39,8 @@ public:
 
     void set_contacts(const std::vector<Contact>& contacts);
 
+    void set_id(const int id);
+
 private:
 
     void setup_panel();
@@ -71,6 +73,8 @@ public slots:
 
     void add_contact(const Contact& contact);
 
+    void create_new_chat(const QString& name, qint64 time, const std::vector<int>& members);
+
 private slots:
 
     void on_new_chat_button_pressed();
@@ -95,9 +99,13 @@ signals:
 
     void load_messages(bool is_client, int id);
 
+    void new_chat(const QString& name, qint64 time, const std::vector<int> members);
+
 private:
 
     Ui::MainWindow* ui;
+
+    int my_id_;
 
     SlidePanel* panel_;
 

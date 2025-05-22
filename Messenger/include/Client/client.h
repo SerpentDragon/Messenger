@@ -61,17 +61,23 @@ public slots:
 
     void update_keys_cash(const std::unordered_map<int, std::string>& cash);
 
+    void new_chat(const QString& name, qint64 time, const std::vector<int> members);
+
 signals:
 
     void auth_resp(SERVER_RESP_CODES resp, int id);
     
-    void receive_msg(bool, const SocketMessage& msg);
+    void receive_msg(const SocketMessage& msg);
     
-    void send_msg(bool display, const SocketMessage& msg);
+    void send_msg(const SocketMessage& msg);
 
     void list_of_contacts(const std::string& name, const std::vector<Contact>& contacts);
 
     void add_contact(const Contact& contact);
+
+    void add_new_chat(int id, const std::string& name, const std::vector<int>& members);
+
+    void save_contact(const Contact& contact);
 
 private:
 

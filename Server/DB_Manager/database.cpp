@@ -139,3 +139,22 @@ Contact DBServerManager::get_contact(int id)
 
     return contact;
 }
+
+int DBServerManager::save_chat(const std::string& name, const std::vector<int>& members)
+{
+    pqxx::work txn(*connection_);
+
+    auto result = txn.exec("INSERT INTO Chat (name, picture) VALUES (" + 
+        txn.quote(name) + ", '') RETURNING chat_id;");
+
+    int chat_id = result[0][0].as<int>();
+
+    for(int mem : members)
+    {
+        txn.exec("INSERT INTO ChatParticipants (client_id, chat_id) VALUES (" +
+            txn.quote(mem) + ", " + txn.quote(chat_id) + ");");
+    }
+    txn.commit();
+
+    return chat_id;
+}

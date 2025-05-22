@@ -134,16 +134,29 @@ void ChatParamsWindow::on_OK_button_pressed()
         }
     }
 
-    if (ui->members_list->model()->rowCount() == 0)
+    qint64 unix_time = date_time.isValid() ? date_time.toSecsSinceEpoch() : -1;
+
+    std::vector<int> chat_members(members_.size());
+    if (members_.size() == 0)
     {
         QMessageBox::critical(this, "Error", "You must add at least 1 member");
         return;
     }
+
+    for(const auto& mem : members_)
+    {
+        qDebug() << "PUSH MEMBER BACK: " << mem->get_id() << '\n';
+        chat_members.push_back(mem->get_id());
+    }
+
+    emit create_new_chat(chat_name, unix_time, chat_members);
 
     this->close();
 }
 
 void ChatParamsWindow::on_CANCEL_button_pressed()
 {
+    ui->chat_name_edit->clear();
+    ui->self_dest_check_box->setChecked(false);
     this->close();
 }

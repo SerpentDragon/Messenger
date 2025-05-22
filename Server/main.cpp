@@ -185,8 +185,6 @@ private:
 
         std::cout << "CLIENT ADDED!\n";
 
-        // check_msg_queue(id);
-
         start_read(id);
     }
 
@@ -282,6 +280,8 @@ private:
     {
         tree_.clear();
 
+        std::vector<int> recvrs;
+
         std::stringstream ss(decrypted_data);
         std::cout << "\"" << ss.str() << "\"\n";
         read_xml(ss, tree_);
@@ -328,9 +328,59 @@ private:
             {
                 int id = tree_.get<int>(SYSTEM_MSG_DATA::contact);
 
+                tree_.clear();
+
                 auto contact = db_manager_.get_contact(id);
 
                 tree_.put(SYSTEM_MSG_DATA::contact, contact.serialize());
+
+                break;
+            }
+            case SYSTEM_MSG::NEW_GROUP_CHAT:
+            {
+                int chat_time;
+                std::string name;
+                std::vector<int> members;
+
+                for(const auto& tag : tree_.get_child(SYSTEM_MSG_DATA::data))
+                {
+                    if (tag.first == "chat_time")
+                    {
+                        chat_time = tree_.get<int>(SYSTEM_MSG_DATA::chat_time);
+                    }
+                    else if (tag.first == "chat_name")
+                    {
+                        name = tree_.get<std::string>(SYSTEM_MSG_DATA::chat_name);
+                    }
+                    if (tag.first == "chat_member")
+                    {
+                        members.emplace_back(std::stoi(tag.second.data()));
+                    }
+                }
+
+                if (chat_time != -1)
+                {
+                    // for self-destructive chats
+                }
+
+                tree_.clear();
+
+                int chat_id = db_manager_.save_chat(name, members);
+
+                tree_.put(SYSTEM_MSG_DATA::chat_id, chat_id);
+                tree_.put(SYSTEM_MSG_DATA::chat_name, name);
+
+                recvrs = members;
+
+                // for(int mem : members)
+                    // tree_.add(SYSTEM_MSG_DATA::chat_member, mem);
+
+                for(int mem : members)
+                {
+                    auto contact = db_manager_.get_contact(mem);
+                    // std::cout << "SERIALIZE: " << contact.serialize() << '\n';
+                    tree_.add(SYSTEM_MSG_DATA::contact, contact.serialize());
+                }
 
                 break;
             }
@@ -347,11 +397,34 @@ private:
         ss = std::stringstream();
         boost::property_tree::write_xml(ss, tree_);
 
-        auto encrypted = Cryptographer::get_cryptographer()->encrypt_AES(ss.str(), online_clients_[sender].public_key);
-        encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
+        std::vector<uint8_t> encrypted;
 
         std::cout << "PREPARE TO SEND---------------------------------\n" << ss.str() << 
             "--------------------------------------------------" << '\n';
+
+        if (cmd == SYSTEM_MSG::NEW_GROUP_CHAT)
+        {
+            for(int recv : recvrs)
+            {
+                if (online_clients_.contains(recv))
+                {
+
+                    encrypted = Cryptographer::get_cryptographer()->encrypt_AES(ss.str(), online_clients_[recv].public_key);
+                    encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
+
+                    online_clients_[recv].socket->send(boost::asio::buffer(encrypted));
+                }
+                else
+                {
+                    MessageQueue::get_queue().add_msg(recv, encrypted);
+                }
+            }
+
+            return;
+        }
+
+        encrypted = Cryptographer::get_cryptographer()->encrypt_AES(ss.str(), online_clients_[sender].public_key);
+        encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
 
         online_clients_[sender].socket->send(boost::asio::buffer(encrypted));
 
@@ -366,14 +439,15 @@ private:
         std::string num = msg.substr(strlen(recv_open_tag), end - strlen(recv_open_tag));
         int receiver = std::stoi(num);
 
-        // std::cout << receiver << '\n';
+        std::cout << "SEND TO:" << receiver << '\n';
 
         std::vector<uint8_t> client_data(msg.begin() + end + strlen(recv_close_tag), msg.end());
         client_data.insert(client_data.end(), std::begin(msg_end), std::end(msg_end) - 1);
 
-        // std::cout << "CLIENT DATA\n";
-        // for(int c : client_data) std::cout << std::dec << c << ' ';
-        // std::cout << "\n\n";
+        std::cout << "SEND IT TO USER: " << client_data.size() << "\n";
+        for(int c : client_data) std::cout << c << ' ';
+        std::cout << "\n-----------------------------------------------------------------------------\n";
+
 
         if (online_clients_.contains(receiver))
         {

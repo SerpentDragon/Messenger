@@ -23,10 +23,11 @@ CREATE TABLE Contact
 DROP TABLE IF EXISTS Chat CASCADE;
 CREATE TABLE Chat
 (
-	chat_id INT PRIMARY KEY,
+	chat_id INT,
 	name VARCHAR(50) NOT NULL,
 	picture VARCHAR(200),
 	personal_id INT NOT NULL,
+	PRIMARY KEY (chat_id, personal_id),
 	FOREIGN KEY (personal_id) REFERENCES Personal(id)
 );
 
@@ -55,16 +56,40 @@ CREATE TABLE Message
 );
 
 
+SELECT * FROM 
+                (SELECT DISTINCT ON (text, sender) * FROM Message ORDER BY text, sender)
+                WHERE chat_id = 38 AND personal_id = 1
+                ORDER BY timestamp;
+
 delete from Personal;
 delete from Contact;
-delete from Chat;
+
 delete from ChatParticipants;
 delete from Message;
 delete from Contact;
+delete from Chat;
 
 select contact_id, nickname, personal_id from Contact;
 
+delete from ChatParticipants;
+delete from Chat;
+
+select contact_id, nickname, personal_id from Contact order by personal_id;
+
+select * from Chat;
+select * from ChatParticipants;
+
 select * from Message;
+
+select * from Personal;
+
+SELECT * FROM
+	(SELECT DISTINCT ON (text, sender) *
+	FROM Message, Contact AS C_R, Contact AS C_S
+	ORDER BY text, sender)
+WHERE chat_id = 38 AND personal_id = 1
+ORDER BY timestamp
+
 
 select * from Personal;
 
@@ -102,6 +127,23 @@ cQIDAQAB
 
 
 select * from Contact;
+
+delete from Contact where contact_id = -1;
+
+
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqFJyVHSPHLakPYe6ADTy
+4JnUKmi3ZNaBsTWGQaw8fY/6pzlsfuJh0fWy7lIW+ZCvw0hFVlBMcE8GH9yWN0xD
+hm5Rs759R5YXKOQpbhuLUqqeyNZxD9aDmMPxv4xQ0OX+wh/3lmK9Ccg0MhutuBzH
+fQltYJfy1lTqKjy0/2SYIdDtUR+d+YBn+whcjrWXiMOKLTgiFnqn6S4fXstXRMAv
+b3wdBi4OQ8PuanBcFlsxhFs/qLTLLlnAj5U2hl+8YcI+r7C4FaGs7DA9lNxOOapU
+KoxdGl7QKDZXjHqeoQu6PBBM7tC5IwHSp1yG8svbv4621QWtK1GzKAgeoFBYYKqE
+cQIDAQAB
+-----END PUBLIC KEY-----
+
+
+
+
 
 insert into Contact
 values

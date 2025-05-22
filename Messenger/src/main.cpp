@@ -76,6 +76,7 @@ private:
         QObject::connect(&db_manager_, &DBManager::loaded_messages, &*main_window_, &MainWindow::loaded_messages);
 
         QObject::connect(&*main_window_, &MainWindow::save_contact, &db_manager_, &DBManager::save_contact);
+        QObject::connect(&*client_, &Client::save_contact, &db_manager_, &DBManager::save_contact);
 
         QObject::connect(&*main_window_, &MainWindow::set_contacts_from_db, this, &ClientApplication::set_contacts_from_db);
 
@@ -83,6 +84,10 @@ private:
         QObject::connect(&db_manager_, &DBManager::save_public_key, &*client_, &Client::save_public_key);
 
         QObject::connect(&*client_, &Client::add_contact, &*main_window_, &MainWindow::add_contact);
+
+        QObject::connect(&*main_window_, &MainWindow::new_chat, &*client_, &Client::new_chat);
+        QObject::connect(&*client_, &Client::add_new_chat, &db_manager_, &DBManager::save_chat);
+        QObject::connect(&db_manager_, &DBManager::add_new_contact, &*main_window_, &MainWindow::add_contact);
     }
 
     void db_connect(bool log_in, int id, const std::string& nickname)
@@ -113,6 +118,7 @@ private:
         qDebug() << "CONNECTED\n";
 
         main_window_->set_contacts(db_manager_.get_contacts_list());
+        main_window_->set_id(id);
 
         qDebug() << "CONTACTS ARE SET\n";
     }

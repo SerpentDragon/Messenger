@@ -38,11 +38,13 @@ public slots:
 
     void db_connect(bool log_in, int id, const std::string& nickname);
 
-    void save_msg(bool display, const SocketMessage& msg);
+    void save_msg(const SocketMessage& msg);
 
     void save_contact(const Contact& contact);
 
     void load_messages(bool is_client, int id);
+
+    void save_chat(int id, const std::string& name, const std::vector<int>& members);
 
 signals:
 
@@ -55,6 +57,8 @@ signals:
     void save_public_key(int id, const std::string& public_key);
 
     void update_keys_cash(std::unordered_map<int, std::string> keys_cash);
+
+    void add_new_contact(const Contact& contact);
 
 private:
 

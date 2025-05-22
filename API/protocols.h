@@ -37,11 +37,16 @@ namespace SYSTEM_MSG_DATA
     inline constexpr char data[] = "msg.data";
     inline constexpr char contact[] = "msg.data.contact";
     inline constexpr char key[] = "msg.data.key";
+    inline constexpr char chat_id[] = "msg.data.chat_id";
+    inline constexpr char chat_name[] = "msg.data.chat_name";
+    inline constexpr char chat_time[] = "msg.data.chat_time";
+    inline constexpr char chat_member[] = "msg.data.chat_member";
 };
 
 enum SYSTEM_MSG : unsigned int
 {
-    LOAD_RSA_KEY = 0,
-    FIND_CONTACT = 1,
-    GET_CONTACT  = 2,
+    LOAD_RSA_KEY   = 0,
+    FIND_CONTACT   = 1,
+    GET_CONTACT    = 2,
+    NEW_GROUP_CHAT = 3,
 };

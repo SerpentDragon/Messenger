@@ -28,6 +28,8 @@ public:
 
     Contact get_contact(int id);
 
+    int save_chat(const std::string& name, const std::vector<int>& members);
+
 private:
 
     std::unique_ptr<pqxx::connection> connection_;

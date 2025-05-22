@@ -8,7 +8,7 @@ CREATE TABLE SystemData
 DROP TABLE IF EXISTS Chat CASCADE;
 CREATE TABLE Chat
 (
-	chat_id INT PRIMARY KEY,
+	chat_id SERIAL PRIMARY KEY,
 	name VARCHAR(50) NOT NULL,
 	picture VARCHAR(200)
 );
@@ -32,6 +32,10 @@ CREATE TABLE ChatParticipants
 	FOREIGN KEY (client_id) REFERENCES Client(id),
 	FOREIGN KEY (chat_id) REFERENCES Chat(chat_id)
 );
+
+
+delete from ChatParticipants;
+delete from Chat;
 
 delete from Client;
 

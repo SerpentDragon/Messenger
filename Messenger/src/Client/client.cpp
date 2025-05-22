@@ -49,7 +49,7 @@ void Client::read()
             {
                 if (!ec)
                 {
-                    qDebug() << "RECEIVED MESSAGE!!!!!";
+                    qDebug() << "RECEIVED MESSAGE!!!!!" << bytes_transferred << "bytes\n";
 
                     std::fill(recv_buffer_.begin(), recv_buffer_.end(), 0);
                     std::size_t len = bytes_transferred < max_msg_length ?
@@ -68,8 +68,8 @@ void Client::read()
 
                     qDebug() << "DATA IS FORMED\n";
 
-                    qDebug() << "DATA:\n";
-                    for(int c : data) std::cout << std::dec << (int)c << ' ';
+                    qDebug() << "DATA:" << data.size();
+                    for(int c : data) qDebug() << (int)c << ' ';
                     qDebug() << "\nDATA\n\n";
 
                     auto result = Cryptographer::get_cryptographer()->decrypt_AES(data);
@@ -131,7 +131,7 @@ void Client::process_in_msg(const std::string& message)
         send_system_msg(SYSTEM_MSG::GET_CONTACT, { QString::number(msg.sender) });
     }
 
-    emit receive_msg(false, msg);
+    emit receive_msg(msg);
 }
 
 void Client::get_auth_resp()
@@ -185,7 +185,59 @@ void Client::process_system_msg_respond()
         Contact cn = Contact::deserialize(tree_.get<std::string>(SYSTEM_MSG_DATA::contact));
         cn.saved_in_db = true;
 
+        client_public_keys_.insert({ cn.id, cn.public_key });
+
         emit add_contact(cn);
+
+        break;
+    }
+    case SYSTEM_MSG::NEW_GROUP_CHAT:
+    {
+        int chat_id;
+        std::string name;
+        std::vector<int> members;
+
+        try
+        {
+            for(const auto& tag : tree_.get_child(SYSTEM_MSG_DATA::data))
+            {
+                if (tag.first == "chat_id")
+                {
+                    chat_id = tree_.get<int>(SYSTEM_MSG_DATA::chat_id);
+                }
+                else if (tag.first == "chat_name")
+                {
+                    name = tree_.get<std::string>(SYSTEM_MSG_DATA::chat_name);
+                }
+                else if (tag.first == "contact")
+                {
+                    std::string condata = tag.second.data();
+                    qDebug() << "CONDATA:" << condata;
+                    Contact cn = Contact::deserialize(condata);
+                    cn.saved_in_db = true;
+                    qDebug() << "ID:" << cn.id;
+
+                    members.emplace_back(cn.id);
+
+                    if (cn.id != id_)
+                    {
+                        qDebug() << __func__ << "ADD CONTACT" << cn.id;
+
+                        qDebug() << "SAVE PUBLIC KEY FOR" << cn.id << ":" << cn.public_key << '\n';
+                        client_public_keys_.insert({ cn.id, cn.public_key });
+
+                        emit add_contact(cn);
+                        emit save_contact(cn);
+                    }
+                }
+            }
+
+            emit add_new_chat(chat_id, name, members);
+        }
+        catch(const std::exception& ex)
+        {
+            qDebug() << "EXCEPTION: " << ex.what() << '\n';
+        }
 
         break;
     }
@@ -261,14 +313,12 @@ void Client::write(SocketMessage& msg)
 
     for(int i = 0; i < msg.receiver.size(); i++)
     {
+        if (msg.receiver[i] == id_) continue;
+
         tree_.clear();
 
-        tree_.put(MSG_TAGS::system, msg.system);
+        tree_.put(MSG_TAGS::system, false);
         tree_.put(MSG_TAGS::sender, msg.sender);
-        //for(int recv : msg.receiver)
-        //{
-        //    tree_.add(MSG_TAGS::receiver, recv);
-        //}
         tree_.put(MSG_TAGS::receiver, msg.receiver[i]);
         tree_.put(MSG_TAGS::text, msg.text);
         tree_.put(MSG_TAGS::timestamp, msg.timestamp);
@@ -279,18 +329,22 @@ void Client::write(SocketMessage& msg)
 
         qDebug() << "send: " << ss.str() << '\n';
 
+        qDebug() << "CLIENT ID:" << msg.receiver[i];
+
+        qDebug() << "USED PUBLIC KEY:" << client_public_keys_[msg.receiver[i]];
+
         auto encrypted = Cryptographer::get_cryptographer()->encrypt_AES(ss.str(), client_public_keys_[msg.receiver[i]]);
 
         std::string recv_data = recv_open_tag + std::to_string(msg.receiver[i]) + recv_close_tag;
         encrypted.insert(encrypted.begin(), recv_data.begin(), recv_data.end());
         encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
 
-        // here
         socket_.send(boost::asio::buffer(encrypted));
-
-        if (i == msg.receiver.size() - 1) [[unlikely]] emit send_msg(true, msg);
-        else emit send_msg(false, msg);
     }
+
+    for(int recv : msg.receiver) qDebug() << "WRITE RECV:" << recv;
+
+    emit send_msg(msg);
 }
 
 void Client::send_system_msg(SYSTEM_MSG type, const std::vector<QString>& data)
@@ -311,6 +365,19 @@ void Client::send_system_msg(SYSTEM_MSG type, const std::vector<QString>& data)
     case SYSTEM_MSG::GET_CONTACT:
     {
         tree_.put(SYSTEM_MSG_DATA::contact, data[0].toStdString());
+        break;
+    }
+    case SYSTEM_MSG::NEW_GROUP_CHAT:
+    {
+        tree_.put(SYSTEM_MSG_DATA::chat_name, data[0].toStdString());
+        tree_.put(SYSTEM_MSG_DATA::chat_time, data[1].toStdString());
+
+        for(int i = 2; i < data.size(); i++)
+        {
+            qDebug() << data[i] << '\n';
+            tree_.add(SYSTEM_MSG_DATA::chat_member, data[i].toStdString());
+        }
+
         break;
     }
     default: return;
@@ -339,4 +406,20 @@ void Client::save_public_key(int id, const std::string& public_key)
 void Client::update_keys_cash(const std::unordered_map<int, std::string>& cash)
 {
     client_public_keys_ = cash;
+}
+
+void Client::new_chat(const QString &name, qint64 time, const std::vector<int> members)
+{
+    std::vector<QString> data;
+    data.emplace_back(name);
+    data.emplace_back(QString::number(time));
+    data.emplace_back(QString::number(id_));
+
+    for(int mem : members)
+    {
+        qDebug() << "MEMBER: " << mem << '\n';
+        data.emplace_back(QString::number(mem));
+    }
+
+    send_system_msg(SYSTEM_MSG::NEW_GROUP_CHAT, data);
 }
