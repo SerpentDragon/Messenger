@@ -202,7 +202,20 @@ private:
             auto opt_data = MessageQueue::get_queue().get_next_msg(id);
             if (!opt_data) break;
 
-            online_clients_[id].socket->send(boost::asio::buffer(*opt_data));
+            std::vector<uint8_t> data;
+            if (opt_data->first)
+            {
+                std::string msg(opt_data->second.begin(), opt_data->second.end());
+                std::cout << "DATA TO BE ENCRYPTED:\n" << msg << "\n-------------------------------------------\n";
+                data = Cryptographer::get_cryptographer()->encrypt_AES(msg, online_clients_[id].public_key);
+                data.insert(data.end(), std::begin(msg_end), std::end(msg_end) - 1);
+            }
+            else
+            {
+                data = opt_data->second;
+            }
+
+            online_clients_[id].socket->send(boost::asio::buffer(data));
         }
     }
 
@@ -416,7 +429,10 @@ private:
                 }
                 else
                 {
-                    MessageQueue::get_queue().add_msg(recv, encrypted);
+                    auto msg = ss.str();
+                    encrypted.clear();
+                    encrypted.insert(encrypted.end(), msg.begin(), msg.end());
+                    MessageQueue::get_queue().add_msg(recv, true, encrypted);
                 }
             }
 
@@ -455,7 +471,7 @@ private:
         }
         else
         {
-            MessageQueue::get_queue().add_msg(receiver, client_data);
+            MessageQueue::get_queue().add_msg(receiver, false, client_data);
         }
     }
 

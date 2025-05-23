@@ -11,14 +11,14 @@ bool MessageQueue::check_msg_queue(int client_id)
     return queue.contains(client_id) && !queue[client_id].empty();
 }
 
-void MessageQueue::add_msg(int client, BUFFER data)
+void MessageQueue::add_msg(int client, bool need_to_encrypt, BUFFER data)
 {
-    queue[client].push(data);
+    queue[client].push({ need_to_encrypt, data });
 }
 
-std::optional<MessageQueue::BUFFER> MessageQueue::get_next_msg(int client_id)
+std::optional<std::pair<bool, MessageQueue::BUFFER>> MessageQueue::get_next_msg(int client_id)
 {
-    std::optional<BUFFER> res = std::nullopt;
+    std::optional<std::pair<bool, BUFFER>> res = std::nullopt;
 
     if (queue.contains(client_id) && !queue[client_id].empty())
     {

@@ -24,9 +24,9 @@ public:
 
     bool check_msg_queue(int client_id);
 
-    void add_msg(int client, BUFFER data);
+    void add_msg(int client, bool need_to_encrypt, BUFFER data);
 
-    std::optional<BUFFER> get_next_msg(int client_id);
+    std::optional<std::pair<bool, MessageQueue::BUFFER>> get_next_msg(int client_id);
 
 private:
 
@@ -36,5 +36,5 @@ private:
 
 private:
 
-    std::unordered_map<int, std::queue<BUFFER>> queue;
+    std::unordered_map<int, std::queue<std::pair<bool, BUFFER>>> queue;
 };
