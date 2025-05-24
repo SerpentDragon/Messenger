@@ -19,6 +19,8 @@ public:
 
     ~MessageForm();
 
+    int get_id() const;
+
 private:
 
     Ui::MessageForm* ui;

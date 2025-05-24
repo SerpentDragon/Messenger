@@ -8,6 +8,8 @@
 // defines for variables
 
 constexpr int max_msg_count = 20;
+constexpr int avg_reading_speed = 20;
+constexpr int addl_time = 5;
 
 using ULL = unsigned long long;
 
@@ -21,6 +23,7 @@ struct SocketMessage
     std::string text;
     ULL timestamp;
     int chat;
+    bool vanishing;
 };
 
 struct ClientMessage
@@ -33,11 +36,12 @@ struct ClientMessage
     std::string text;
     std::string time;
     int chat;
+    bool vanishing;
 
     explicit ClientMessage(int Id, const std::string& sndr, int sndr_id,
-        const std::string& rcvr, int rcvr_id, const std::string& txt, ULL tm, int cht)
+        const std::string& rcvr, int rcvr_id, const std::string& txt, ULL tm, int cht, bool vnshng)
         : id(Id), sender(sndr), sender_id(sndr_id), receiver(rcvr),
-        receiver_id(rcvr_id), text(txt), chat(cht)
+        receiver_id(rcvr_id), text(txt), chat(cht), vanishing(vnshng)
     {
         build_timestamp(tm);
     }

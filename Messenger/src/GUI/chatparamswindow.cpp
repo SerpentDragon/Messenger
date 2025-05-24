@@ -127,11 +127,11 @@ void ChatParamsWindow::on_OK_button_pressed()
     {
         date_time = ui->dateTimeEdit->dateTime();
 
-        if(date_time < QDateTime::currentDateTime().addSecs(15 * 60))
-        {
-            QMessageBox::critical(this, "Error", "No less then 15 min");
-            return;
-        }
+        // if(date_time < QDateTime::currentDateTime().addSecs(15 * 60))
+        // {
+        //     QMessageBox::critical(this, "Error", "No less then 15 min");
+        //     return;
+        // }
     }
 
     qint64 unix_time = date_time.isValid() ? date_time.toSecsSinceEpoch() : -1;
@@ -148,6 +148,8 @@ void ChatParamsWindow::on_OK_button_pressed()
         qDebug() << "PUSH MEMBER BACK: " << mem->get_id() << '\n';
         chat_members.push_back(mem->get_id());
     }
+
+    qDebug() << "UNIX TIME:" << unix_time;
 
     emit create_new_chat(chat_name, unix_time, chat_members);
 

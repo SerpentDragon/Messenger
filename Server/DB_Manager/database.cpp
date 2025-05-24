@@ -158,3 +158,19 @@ int DBServerManager::save_chat(const std::string& name, const std::vector<int>& 
 
     return chat_id;
 }
+
+void DBServerManager::delete_chat(int chat_id)
+{
+    pqxx::work txn(*connection_);
+
+    txn.exec("DELETE FROM ChatParticipants WHERE chat_id = " + 
+        txn.quote(chat_id) + ";");
+
+    txn.exec("DELETE FROM Chat WHERE chat_id = " +
+        txn.quote(chat_id) + ";");
+
+    txn.commit();
+
+    std::cout << "CHAT " << chat_id << " DELETED\n";
+
+}

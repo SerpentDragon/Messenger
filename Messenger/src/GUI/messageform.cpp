@@ -37,12 +37,14 @@ MessageForm::MessageForm(ClientMessage* message, bool left_align, QWidget *paren
     ui->nickname_label->setAlignment(text_align);
     ui->text_label->setAlignment(text_align);
     ui->time_label->setAlignment(text_align);
-
-    // qDebug() << this->size() << '\n';
-    // qDebug() << ui->text_label->size() << '\n';
 }
 
 MessageForm::~MessageForm()
 {
     delete ui;
+}
+
+int MessageForm::get_id() const
+{
+    return msg->id;
 }

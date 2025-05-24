@@ -23,7 +23,7 @@ CREATE TABLE Contact
 DROP TABLE IF EXISTS Chat CASCADE;
 CREATE TABLE Chat
 (
-	chat_id INT,
+	chat_id INT NOT NULL,
 	name VARCHAR(50) NOT NULL,
 	picture VARCHAR(200),
 	personal_id INT NOT NULL,
@@ -36,9 +36,10 @@ CREATE TABLE ChatParticipants
 (
 	contact_id INT,
 	chat_id INT,
-	PRIMARY KEY (contact_id, chat_id),
-	FOREIGN KEY (contact_id) REFERENCES Contact(contact_id),
-	FOREIGN KEY (chat_id) REFERENCES Chat(chat_id)
+	personal_id INT,
+	PRIMARY KEY (contact_id, chat_id, personal_id),
+	FOREIGN KEY (contact_id, personal_id) REFERENCES Contact(contact_id, personal_id),
+	FOREIGN KEY (chat_id, personal_id) REFERENCES Chat(chat_id, personal_id)
 );
 
 DROP TABLE IF EXISTS Message;
@@ -50,11 +51,17 @@ CREATE TABLE Message
 	text VARCHAR(2000) NOT NULL,
 	timestamp BIGINT NOT NULL,
 	chat_id INT,
+	vanishing BOOL,
 	personal_id INT NOT NULL,
-	FOREIGN KEY (chat_id) REFERENCES Chat(chat_id),
+	FOREIGN KEY (chat_id, personal_id) REFERENCES Chat(chat_id, personal_id),
 	FOREIGN KEY (personal_id) REFERENCES Personal(id)
 );
 
+
+
+
+
+select * from Contact;
 
 SELECT * FROM 
                 (SELECT DISTINCT ON (text, sender) * FROM Message ORDER BY text, sender)
@@ -66,7 +73,7 @@ delete from Contact;
 
 delete from ChatParticipants;
 delete from Message;
-delete from Contact;
+--delete from Contact;
 delete from Chat;
 
 select contact_id, nickname, personal_id from Contact;
@@ -80,6 +87,12 @@ select * from Chat;
 select * from ChatParticipants;
 
 select * from Message;
+
+SELECT * FROM
+                (SELECT DISTINCT ON (text, sender) * FROM Message WHERE personal_id = 2 ORDER BY text, sender)
+                WHERE chat_id = 100
+                AND personal_id = 2
+                ORDER BY timestamp;
 
 select * from Personal;
 

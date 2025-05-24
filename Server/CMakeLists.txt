@@ -17,6 +17,7 @@ set(PROJECT_SOURCES
     ServerUtils/messagequeue.h
     ServerUtils/cryptographer.cpp
     ServerUtils/cryptographer.h
+    ServerUtils/timer.h
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})

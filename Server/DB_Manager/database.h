@@ -30,6 +30,8 @@ public:
 
     int save_chat(const std::string& name, const std::vector<int>& members);
 
+    void delete_chat(int chat_id);
+
 private:
 
     std::unique_ptr<pqxx::connection> connection_;

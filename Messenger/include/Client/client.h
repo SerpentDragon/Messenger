@@ -75,9 +75,11 @@ signals:
 
     void add_contact(const Contact& contact);
 
-    void add_new_chat(int id, const std::string& name, const std::vector<int>& members);
+    void add_new_chat(int id, const std::string& name, qint64 time, const std::vector<int>& members);
 
     void save_contact(const Contact& contact);
+
+    void delete_chat(int chat_id);
 
 private:
 

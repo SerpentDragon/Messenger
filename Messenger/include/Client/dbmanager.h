@@ -3,6 +3,8 @@
 
 #include "../common_defs.h"
 #include "../../../API/common_structure.h"
+#include "../../../API/protocols.h"
+#include "timer.h"
 
 #include <deque>
 #include <format>
@@ -44,21 +46,29 @@ public slots:
 
     void load_messages(bool is_client, int id);
 
-    void save_chat(int id, const std::string& name, const std::vector<int>& members);
+    void save_chat(int id, const std::string& name, qint64 time, const std::vector<int>& members);
+
+    void delete_chat(int chat_id);
+
+    void delete_messages(const std::vector<int>& msgs_ids);
+
+    void process_system_signal(int signal, const std::vector<int>& ids);
 
 signals:
 
     void loaded_messages(const std::deque<ClientMessage>& msgs);
 
-    void receive_msg(const ClientMessage& msg);
+    void receive_msg(const ClientMessage& msg, const std::vector<int> ids);
 
-    void display_sent_msg(const ClientMessage& msg);
+    void display_sent_msg(const ClientMessage& msg, const std::vector<int> ids);
 
     void save_public_key(int id, const std::string& public_key);
 
     void update_keys_cash(std::unordered_map<int, std::string> keys_cash);
 
     void add_new_contact(const Contact& contact);
+
+    void delete_chat_sig();
 
 private:
 

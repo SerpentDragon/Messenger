@@ -55,19 +55,19 @@ void MessageEntryField::set_buttons_geometry()
 
 void MessageEntryField::msg_params_button_pressed()
 {
-    QMenu *menu = new QMenu(this->parentWidget());
-    QWidgetAction* vanishing_msg_act = new QWidgetAction(menu);
+    menu_ = new QMenu(this->parentWidget());
+    QWidgetAction* vanishing_msg_act = new QWidgetAction(menu_);
 
-    QCheckBox* vanishing_msg_chkbx = new QCheckBox("Vanishing message", menu);
-    vanishing_msg_chkbx->setStyleSheet(R"(background-color: white;)");
+    vanishing_msg_chkbx_ = new QCheckBox("Vanishing message", menu_);
+    vanishing_msg_chkbx_->setStyleSheet(R"(background-color: white;)");
 
-    vanishing_msg_act->setDefaultWidget(vanishing_msg_chkbx);
-    menu->addAction(vanishing_msg_act);
+    vanishing_msg_act->setDefaultWidget(vanishing_msg_chkbx_);
+    menu_->addAction(vanishing_msg_act);
 
-    connect(msg_params_, &QPushButton::clicked, this, [this, menu]() {
+    connect(msg_params_, &QPushButton::clicked, this, [this]() {
         QPoint point = msg_params_->mapToGlobal(QPoint{ 0, 0 });
-        menu->popup({ point.x() - (menu->width() - msg_params_->width()) / 2 ,
-                     point.y() - menu->height() });
+        menu_->popup({ point.x() - (menu_->width() - msg_params_->width()) / 2 ,
+                     point.y() - menu_->height() });
     });
 }
 
@@ -75,8 +75,12 @@ void MessageEntryField::send_msg_button_pressed()
 {
     auto msg_text = msg_edit_->toPlainText();
     msg_edit_->clear();
-    
-    emit send_msg(msg_text);
+
+    emit send_msg(vanishing_msg_chkbx_->isChecked(), msg_text);
+
+    qDebug() << "IS CHECKED?" << vanishing_msg_chkbx_->isChecked();
+
+    vanishing_msg_chkbx_->setChecked(false);
 }
 
 void MessageEntryField::calculate_widgets_pos()

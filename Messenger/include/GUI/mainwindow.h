@@ -7,6 +7,7 @@
 #include "messageform.h"
 #include "slidepanel.h"
 #include "../common_defs.h"
+#include "../Client/timer.h"
 #include "../../../API/common_structure.h"
 #include "../../../API/protocols.h"
 
@@ -41,19 +42,27 @@ public:
 
     void set_id(const int id);
 
+    void update_message_field();
+
+protected:
+
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
 private:
 
     void setup_panel();
 
     void setup_icons();
 
-    void resizeEvent(QResizeEvent* event);
+    void setup_timer(const ClientMessage& msg, const std::vector<int>& ids);
+
+    void resizeEvent(QResizeEvent* event) override;
 
     void clear_list_view(QListView* list);
 
     void display_contacts();
 
-    void add_message(const ClientMessage& msg);
+    void add_message(const ClientMessage& msg, const std::vector<int> ids);
 
     void display_messages();
 
@@ -61,19 +70,21 @@ private:
 
 public slots:
 
-    void send_msg(const QString& text);
+    void send_msg(bool vanishing, const QString& text);
 
-    void receive_msg(const ClientMessage& msg);
+    void receive_msg(const ClientMessage& msg, const std::vector<int> ids);
 
     void list_of_contacts(const std::string& name, const std::vector<Contact>& contacts_from_srv);
 
     void loaded_messages(const std::deque<ClientMessage>& msgs);
 
-    void display_sent_msg(const ClientMessage& msg);
+    void display_sent_msg(const ClientMessage& msg, const std::vector<int>& ids);
 
     void add_contact(const Contact& contact);
 
     void create_new_chat(const QString& name, qint64 time, const std::vector<int>& members);
+
+    void delete_messages(int type, const std::vector<int>& msgs_ids);
 
 private slots:
 
@@ -100,6 +111,8 @@ signals:
     void load_messages(bool is_client, int id);
 
     void new_chat(const QString& name, qint64 time, const std::vector<int> members);
+
+    void delete_messages_sig(const std::vector<int>& ids);
 
 private:
 

@@ -33,6 +33,7 @@ CREATE TABLE ChatParticipants
 	FOREIGN KEY (chat_id) REFERENCES Chat(chat_id)
 );
 
+select * from Chat;
 
 delete from ChatParticipants;
 delete from Chat;

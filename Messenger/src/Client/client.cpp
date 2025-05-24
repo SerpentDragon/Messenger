@@ -121,13 +121,13 @@ void Client::process_in_msg(const std::string& message)
     SocketMessage msg;
     build_in_msg(msg);
 
-    qDebug() << "CL_PUB_K\n";
-    for(auto k : client_public_keys_) qDebug() << k.first;
-    qDebug() << "--------\n";
+    // qDebug() << "CL_PUB_K\n";
+    // for(auto k : client_public_keys_) qDebug() << k.first;
+    // qDebug() << "--------\n";
 
     if (!client_public_keys_.contains(msg.sender))
     {
-        qDebug() << "GET CONTACT\n";
+        // qDebug() << "GET CONTACT\n";
         send_system_msg(SYSTEM_MSG::GET_CONTACT, { QString::number(msg.sender) });
     }
 
@@ -194,6 +194,7 @@ void Client::process_system_msg_respond()
     case SYSTEM_MSG::NEW_GROUP_CHAT:
     {
         int chat_id;
+        qint64 chat_time;
         std::string name;
         std::vector<int> members;
 
@@ -208,6 +209,10 @@ void Client::process_system_msg_respond()
                 else if (tag.first == "chat_name")
                 {
                     name = tree_.get<std::string>(SYSTEM_MSG_DATA::chat_name);
+                }
+                else if (tag.first == "chat_time")
+                {
+                    chat_time = tree_.get<ULL>(SYSTEM_MSG_DATA::chat_time);
                 }
                 else if (tag.first == "contact")
                 {
@@ -232,7 +237,7 @@ void Client::process_system_msg_respond()
                 }
             }
 
-            emit add_new_chat(chat_id, name, members);
+            emit add_new_chat(chat_id, name, chat_time, members);
         }
         catch(const std::exception& ex)
         {
@@ -273,17 +278,10 @@ void Client::build_in_msg(SocketMessage& msg)
     msg.system = false;
     msg.sender = tree_.get<int>(MSG_TAGS::sender);
     msg.receiver = { id_ };
-    // for(const auto& child : tree_.get_child(MSG_TAGS::msg))
-    // {
-    //     if (child.first == "receiver")
-    //     {
-    //         int val = child.second.get<int>("");
-    //         msg.receiver.emplace_back(val);
-    //     }
-    // }
     msg.text = tree_.get<std::string>(MSG_TAGS::text);
     msg.timestamp = tree_.get<ULL>(MSG_TAGS::timestamp);
     msg.chat = tree_.get<int>(MSG_TAGS::chat);
+    msg.vanishing = tree_.get<bool>(MSG_TAGS::vanishing);
 }
 
 void Client::log_in_user(bool log_in, const std::string& nickname, const std::string& password)
@@ -323,6 +321,7 @@ void Client::write(SocketMessage& msg)
         tree_.put(MSG_TAGS::text, msg.text);
         tree_.put(MSG_TAGS::timestamp, msg.timestamp);
         tree_.put(MSG_TAGS::chat, msg.chat);
+        tree_.put(MSG_TAGS::vanishing, msg.vanishing);
 
         std::stringstream ss;
         boost::property_tree::write_xml(ss, tree_);
@@ -414,6 +413,8 @@ void Client::new_chat(const QString &name, qint64 time, const std::vector<int> m
     data.emplace_back(name);
     data.emplace_back(QString::number(time));
     data.emplace_back(QString::number(id_));
+
+    qDebug() << "CLIENT CHAT TIME:" << QString::number(time);
 
     for(int mem : members)
     {

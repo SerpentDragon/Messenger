@@ -37,7 +37,7 @@ private slots:
 
 signals:
     
-    void send_msg(const QString& text);
+    void send_msg(bool vanishing, const QString& text);
 
 private:
 
@@ -46,6 +46,9 @@ private:
     QPushButton* msg_params_;
     QPushButton* attach_file_;
     QPushButton* send_msg_;
+
+    QMenu* menu_;
+    QCheckBox* vanishing_msg_chkbx_;
 
     constexpr static int button_sz_ = 50;
 };

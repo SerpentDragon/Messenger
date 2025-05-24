@@ -88,6 +88,9 @@ private:
         QObject::connect(&*main_window_, &MainWindow::new_chat, &*client_, &Client::new_chat);
         QObject::connect(&*client_, &Client::add_new_chat, &db_manager_, &DBManager::save_chat);
         QObject::connect(&db_manager_, &DBManager::add_new_contact, &*main_window_, &MainWindow::add_contact);
+
+        QObject::connect(&db_manager_, &DBManager::delete_chat_sig, this, &ClientApplication::set_contacts_from_db);
+        QObject::connect(&*main_window_, &MainWindow::delete_messages_sig, &db_manager_, &DBManager::delete_messages);
     }
 
     void db_connect(bool log_in, int id, const std::string& nickname)
@@ -103,7 +106,7 @@ private:
             Cryptographer::get_cryptographer()->generate_RSA_keys();
             keys = Cryptographer::get_cryptographer()->serialize_RSA_keys();
 
-            db_manager_.save_RSA_keys(keys); 
+            db_manager_.save_RSA_keys(keys);
         }
         else
         {
@@ -126,9 +129,8 @@ private:
     void set_contacts_from_db()
     {
         auto list = db_manager_.get_contacts_list();
-        for(auto c : list) qDebug() << c.id << c.name;
-        qDebug() << "ALLES\n";
         main_window_->set_contacts(list);
+        main_window_->update_message_field();
     }
 
 private:
@@ -170,3 +172,5 @@ int main(int argc, char *argv[])
         return 1;
     }
 }
+        // QObject::connect(&*client_, &Client::delete_chat, this, &ClientApplication::set_contacts_from_db);
+

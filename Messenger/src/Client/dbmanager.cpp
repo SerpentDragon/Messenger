@@ -17,10 +17,6 @@ std::vector<Contact> DBManager::get_contacts_list()
 
     pqxx::work txn(*connection_);
 
-    qDebug() << "CONTACTS CASH 1\n";
-    for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
-    qDebug() << "-------------\n";
-
     for(const auto& contact : contacts_cash_)
     {
         Contact cn
@@ -38,14 +34,17 @@ std::vector<Contact> DBManager::get_contacts_list()
 
     try
     {
-        auto result = txn.exec("SELECT * FROM Chat;");
+        auto result = txn.exec("SELECT * FROM Chat WHERE personal_id = " +
+                               txn.quote(id_) + ";");
+
         for (const auto& row : result)
         {
             int chat_id = row["chat_id"].as<int>();
-            auto part = txn.exec("SELECT contact_id FROM ChatParticipants WHERE chat_id = "
-                                 + txn.quote(chat_id) + ";");
+            auto part = txn.exec("SELECT contact_id FROM ChatParticipants WHERE chat_id = " +
+                                 txn.quote(chat_id) + " AND personal_id = " +
+                                 txn.quote(id_) + ";");
 
-            std::vector<int> participants;
+            std::vector<int> participants{ id_ };
             for(const auto& p : part) participants.push_back(p["contact_id"].as<int>());
 
             Contact contact
@@ -123,10 +122,6 @@ void DBManager::build_contacts_cash()
 
     qDebug() << "QR: " << qr << '\n';
 
-    qDebug() << "CONTACTS CASH 2\n";
-    for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
-    qDebug() << "-------------\n";
-
     for (const auto& row : result)
     {
 
@@ -138,16 +133,8 @@ void DBManager::build_contacts_cash()
                                }
                               });
 
-        qDebug() << "CONTACTS CASH 3\n";
-        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
-        qDebug() << "-------------\n";
-
         keys_cash.insert({ row["contact_id"].as<int>(), row["public_key"].as<std::string>() });
     }
-
-    qDebug() << "CONTACTS CASH 4\n";
-    for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
-    qDebug() << "-------------\n";
 
     emit update_keys_cash(keys_cash);
 
@@ -195,20 +182,19 @@ void DBManager::save_msg(const SocketMessage& msg)
     pqxx::work txn(*connection_);
     pqxx::result result;
     int receiver;
-
-    qDebug() << "RECV SIZE:" << msg.receiver.size();
-    for(int recv : msg.receiver) qDebug() << "RECV: " << recv;
+    std::vector<int> msgs_ids;
 
     for(int recv : msg.receiver)
     {
         if (recv == id_ && msg.sender == id_) continue;
 
-        std::string qr = "INSERT INTO Message (receiver, sender, text, timestamp, chat_id, personal_id) VALUES(" +
+        std::string qr = "INSERT INTO Message (receiver, sender, text, timestamp, chat_id, vanishing, personal_id) VALUES(" +
                          txn.quote(recv) + ", " +
                          txn.quote(msg.sender) + ", " +
                          txn.quote(msg.text) + ", " +
                          txn.quote(msg.timestamp) + ", " +
                          (msg.chat == -1 ? "NULL" : txn.quote(msg.chat)) + ", " +
+                         txn.quote(msg.vanishing) + ", " +
                          txn.quote(id_) + ") RETURNING id;";
 
         qDebug() << qr << '\n';
@@ -216,6 +202,7 @@ void DBManager::save_msg(const SocketMessage& msg)
         try
         {
             result = txn.exec(qr);
+            msgs_ids.emplace_back(result[0][0].as<int>());
             receiver = recv;
         } catch (const std::exception& ex)
         {
@@ -230,29 +217,18 @@ void DBManager::save_msg(const SocketMessage& msg)
 
     if (msg.sender != id_)
     {
-        qDebug() << "CONTACTS CASH 5\n";
-        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
-        qDebug() << "-------------\n";
-        ClientMessage cl_msg = ClientMessage(new_id, contacts_cash_[msg.sender].name, msg.sender,
-                                             nickname_, id_, msg.text, msg.timestamp, msg.chat);
-        qDebug() << "CONTACTS CASH 6\n";
-        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
-        qDebug() << "-------------\n";
+        ClientMessage cl_msg = ClientMessage(new_id, contacts_cash_[msg.sender].name,
+                                             msg.sender, nickname_, id_, msg.text,
+                                             msg.timestamp, msg.chat, msg.vanishing);
 
-        emit receive_msg(cl_msg);
+        emit receive_msg(cl_msg, msgs_ids);
     }
     else
     {
-        qDebug() << "CONTACTS CASH 7\n";
-        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
-        qDebug() << "-------------\n";
-        ClientMessage cl_msg = ClientMessage(new_id, nickname_, id_,
-                                             contacts_cash_[receiver].name, receiver, msg.text,
-                                             msg.timestamp, msg.chat);
-        qDebug() << "CONTACTS CASH 7\n";
-        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
-        qDebug() << "-------------\n";
-        emit display_sent_msg(cl_msg);
+        ClientMessage cl_msg = ClientMessage(new_id, nickname_, id_, contacts_cash_[receiver].name,
+                                             receiver, msg.text, msg.timestamp, msg.chat,
+                                             msg.vanishing);
+        emit display_sent_msg(cl_msg, msgs_ids);
     }
 
     qDebug() << "leave" << __func__ << '\n';
@@ -287,15 +263,7 @@ void DBManager::save_contact(const Contact& contact)
                  txn.quote(id_) + ");");
         txn.commit();
 
-        qDebug() << "CONTACTS CASH 8\n";
-        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
-        qDebug() << "-------------\n";
-
         contacts_cash_[contact.id] = { contact.name, contact.public_key, contact.picture };
-
-        qDebug() << "CONTACTS CASH 8\n";
-        for(auto v : contacts_cash_) qDebug() << v.first << v.second.name;
-        qDebug() << "-------------\n";
 
         emit save_public_key(contact.id, contact.public_key);
     }
@@ -333,7 +301,7 @@ void DBManager::load_messages(bool is_client, int id)
         std::string contact_name = contacts_cash_[id].name;
 
         result = txn.exec(
-            std::string("SELECT id, receiver, sender, text, timestamp, chat_id FROM Message WHERE ") +
+            std::string("SELECT id, receiver, sender, text, timestamp, chat_id, vanishing FROM Message WHERE ") +
             "(receiver = " + txn.quote(id) + " OR sender = " + txn.quote(id) + ") " +
             "AND personal_id = " + txn.quote(id_) +
             " AND chat_id IS " + (is_client ? "" : "NOT") + " NULL ORDER BY timestamp " +
@@ -355,7 +323,8 @@ void DBManager::load_messages(bool is_client, int id)
                     receiver,
                     row["text"].as<std::string>(),
                     row["timestamp"].as<ULL>(),
-                    row["chat_id"].is_null() ? -1 : row["chat_id"].as<int>()
+                    row["chat_id"].is_null() ? -1 : row["chat_id"].as<int>(),
+                    row["vanishing"].as<bool>()
                 });
         }
         //}
@@ -363,9 +332,13 @@ void DBManager::load_messages(bool is_client, int id)
     else
     {
         result = txn.exec(std::string("SELECT * FROM ") +
-                "(SELECT DISTINCT ON (text, sender) * FROM Message ORDER BY text, sender)" +
-                "WHERE chat_id = " + txn.quote(id) +
-                "ORDER BY timestamp;");
+                          "(SELECT DISTINCT ON (text, sender) * FROM Message WHERE personal_id = "
+                          + txn.quote(id_) + " ORDER BY text, sender)" +
+                          "WHERE chat_id = " + txn.quote(id) +
+                          " AND personal_id = " + txn.quote(id_) +
+                          "ORDER BY timestamp;");
+
+        qDebug() << "LOAD MESSAGES FROM CHAT SIZE:" << result.size();
 
         for (const auto& row : result)
         {
@@ -382,8 +355,11 @@ void DBManager::load_messages(bool is_client, int id)
                     receiver,
                     row["text"].as<std::string>(),
                     row["timestamp"].as<ULL>(),
-                    row["chat_id"].is_null() ? -1 : row["chat_id"].as<int>()
+                    row["chat_id"].is_null() ? -1 : row["chat_id"].as<int>(),
+                    row["vanishing"].as<bool>()
                 });
+
+            qDebug() << "MSG ID:" << msgs.back().id;
         }
     }
 
@@ -392,7 +368,7 @@ void DBManager::load_messages(bool is_client, int id)
     qDebug() << "leave" << __func__ << '\n';
 }
 
-void DBManager::save_chat(int chat_id, const std::string& name, const std::vector<int>& members)
+void DBManager::save_chat(int chat_id, const std::string& name, qint64 time, const std::vector<int>& members)
 {
     qDebug() << __func__ << chat_id << '\n';
 
@@ -409,16 +385,15 @@ void DBManager::save_chat(int chat_id, const std::string& name, const std::vecto
         return;
     }
 
-
-
     qDebug() << __func__ << "MEMBERS SIZE:" << members.size();
 
     try
     {
         for(int mem : members)
         {
-            txn.exec("INSERT INTO ChatParticipants (contact_id, chat_id) VALUES (" +
-                     txn.quote(mem) + ", " + txn.quote(chat_id) + ");");
+            if (mem == id_) [[unlikely]] continue;
+            txn.exec("INSERT INTO ChatParticipants (contact_id, chat_id, personal_id) VALUES (" +
+                     txn.quote(mem) + ", " + txn.quote(chat_id) + ", " + txn.quote(id_) + ");");
         }
     }
     catch(const std::exception& ex)
@@ -441,5 +416,66 @@ void DBManager::save_chat(int chat_id, const std::string& name, const std::vecto
 
     emit add_new_contact(contact);
 
+    if (time != -1)
+    {
+        qDebug() << "START THE TIMER\n";
+        Timer* timer = new Timer(this);
+        timer->start(time, SYSTEM_MSG::DELETE_GROUP_CHAT, { chat_id });
+        QObject::connect(timer, &Timer::timeout, this, &DBManager::process_system_signal);
+    }
     qDebug() << "leave" << __func__ << '\n';
+}
+
+void DBManager::delete_chat(int chat_id)
+{
+    pqxx::work txn(*connection_);
+
+    try
+    {
+        txn.exec("DELETE FROM ChatParticipants WHERE chat_id = " +
+                 txn.quote(chat_id) + " AND personal_id = " + txn.quote(id_) + ";");
+
+        txn.exec("DELETE FROM Message WHERE chat_id = " +
+                 txn.quote(chat_id) + " AND personal_id = " + txn.quote(id_) + ";");
+
+        txn.exec("DELETE FROM Chat WHERE chat_id = " +
+                 txn.quote(chat_id) + " AND personal_id = " + txn.quote(id_) + ";");
+
+        txn.commit();
+    }
+    catch(const std::exception& ex)
+    {
+        qDebug() << ex.what() << '\n';
+    }
+
+    emit delete_chat_sig();
+}
+
+void DBManager::delete_messages(const std::vector<int>& msgs_ids)
+{
+    pqxx::work txn(*connection_);
+
+    std::string ids_str;
+    for(int i = 0; i < msgs_ids.size(); i++)
+    {
+        ids_str += std::to_string(msgs_ids[0]);
+        if (i != msgs_ids.size() - 1) [[likely]] ids_str += ", ";
+    }
+
+    try
+    {
+        txn.exec("DELETE FROM Message WHERE id IN (" + ids_str +
+                 ") AND personal_id = " + txn.quote(id_) + ";");
+        txn.commit();
+    }
+    catch(const std::exception& ex)
+    {
+        qDebug() << __func__ << ex.what();
+    }
+}
+
+void DBManager::process_system_signal(int signal, const std::vector<int>& ids)
+{
+    qDebug() << __func__ << signal << ids[0] << '\n';
+    if (signal == SYSTEM_MSG::DELETE_GROUP_CHAT) delete_chat(ids[0]);
 }

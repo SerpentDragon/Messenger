@@ -1,9 +1,9 @@
 #pragma once
 
-constexpr inline int max_msg_length = 5000;
-constexpr inline char msg_end[] = "<END>";
-constexpr inline char recv_open_tag[] = "<receiver>";
-constexpr inline char recv_close_tag[] = "</receiver>";
+inline constexpr int max_msg_length = 5000;
+inline constexpr char msg_end[] = "<END>";
+inline constexpr char recv_open_tag[] = "<receiver>";
+inline constexpr char recv_close_tag[] = "</receiver>";
 
 namespace USER_DATA
 {
@@ -27,6 +27,7 @@ namespace MSG_TAGS
     inline constexpr char text[] = "msg.text";
     inline constexpr char timestamp[] = "msg.timestamp";
     inline constexpr char chat[] = "msg.chat";
+    inline constexpr char vanishing[] = "msg.vanishing";
 };
 
 namespace SYSTEM_MSG_DATA
@@ -45,8 +46,10 @@ namespace SYSTEM_MSG_DATA
 
 enum SYSTEM_MSG : unsigned int
 {
-    LOAD_RSA_KEY   = 0,
-    FIND_CONTACT   = 1,
-    GET_CONTACT    = 2,
-    NEW_GROUP_CHAT = 3,
+    LOAD_RSA_KEY      = 0,
+    FIND_CONTACT      = 1,
+    GET_CONTACT       = 2,
+    NEW_GROUP_CHAT    = 3,
+    DELETE_GROUP_CHAT = 4,
+    DELETE_MESSAGE    = 5,
 };

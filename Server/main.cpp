@@ -5,6 +5,7 @@
 #include <boost/shared_ptr.hpp>
 #include <iostream>
 #include <iterator>
+#include <mutex>
 #include <pqxx/pqxx>
 #include <sstream>
 #include <unordered_map>
@@ -12,6 +13,7 @@
 #include "DB_Manager/database.h"
 #include "ServerUtils/cryptographer.h"
 #include "ServerUtils/messagequeue.h"
+#include "ServerUtils/timer.h"
 #include "../API/resp_codes.h"
 #include "../API/protocols.h"
 #include "../API/common_structure.h"
@@ -19,7 +21,7 @@
 using boost::asio::ip::tcp;
 using boost::property_tree::ptree;
 
-class Server
+class Server : public std::enable_shared_from_this<Server>
 {
 private:
 
@@ -181,9 +183,11 @@ private:
             handle_accept(new_socket, cl_pub_key);
         }
 
-        online_clients_[id] = { new_socket, cl_pub_key };
+        // online_clients_[id] = Client{ .socket = new_socket, .mtx = {}, .public_key = cl_pub_key };
 
-        std::cout << "CLIENT ADDED!\n";
+        auto res = online_clients_.try_emplace(id, new_socket, cl_pub_key);
+
+        std::cout << "CLIENT ADDED! " << res.second << '\n';
 
         start_read(id);
     }
@@ -221,7 +225,7 @@ private:
 
     void start_read(int id)
     {
-        auto socket = online_clients_[id].socket;
+        auto socket = online_clients_.at(id).socket;
 
         BUFFER data_ptr(new boost::array<char, max_msg_length>);
         memset(data_ptr->data(), 0, max_msg_length);
@@ -313,7 +317,7 @@ private:
                 tree_.clear();
 
                 db_manager_.load_RSA_key(sender, key);
-                online_clients_[sender].public_key = key;
+                online_clients_.at(sender).public_key = key;
 
                 check_msg_queue(sender);
 
@@ -371,27 +375,32 @@ private:
                     }
                 }
 
-                if (chat_time != -1)
-                {
-                    // for self-destructive chats
-                }
-
                 tree_.clear();
 
                 int chat_id = db_manager_.save_chat(name, members);
 
+                if (chat_time != -1)
+                {
+                    std::time_t now_time = std::time(nullptr);
+                    int diff_seconds = static_cast<int>(std::difftime(chat_time, now_time));
+
+                    std::cout << "Prepare to start a timer for chat " << chat_id << '\n';
+                    Timer timer;
+                    timer.start( diff_seconds, [this, members, chat_id]()
+                        {
+                            db_manager_.delete_chat(chat_id);
+                        });
+                }
+
                 tree_.put(SYSTEM_MSG_DATA::chat_id, chat_id);
                 tree_.put(SYSTEM_MSG_DATA::chat_name, name);
+                tree_.put(SYSTEM_MSG_DATA::chat_time, chat_time);
 
                 recvrs = members;
-
-                // for(int mem : members)
-                    // tree_.add(SYSTEM_MSG_DATA::chat_member, mem);
 
                 for(int mem : members)
                 {
                     auto contact = db_manager_.get_contact(mem);
-                    // std::cout << "SERIALIZE: " << contact.serialize() << '\n';
                     tree_.add(SYSTEM_MSG_DATA::contact, contact.serialize());
                 }
 
@@ -419,30 +428,13 @@ private:
         {
             for(int recv : recvrs)
             {
-                if (online_clients_.contains(recv))
-                {
-
-                    encrypted = Cryptographer::get_cryptographer()->encrypt_AES(ss.str(), online_clients_[recv].public_key);
-                    encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
-
-                    online_clients_[recv].socket->send(boost::asio::buffer(encrypted));
-                }
-                else
-                {
-                    auto msg = ss.str();
-                    encrypted.clear();
-                    encrypted.insert(encrypted.end(), msg.begin(), msg.end());
-                    MessageQueue::get_queue().add_msg(recv, true, encrypted);
-                }
+                send_data(ss.str(), recv);
             }
 
             return;
         }
 
-        encrypted = Cryptographer::get_cryptographer()->encrypt_AES(ss.str(), online_clients_[sender].public_key);
-        encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
-
-        online_clients_[sender].socket->send(boost::asio::buffer(encrypted));
+        send_data(ss.str(), sender);
 
         std::cout << "SYSTEM MSG PROCESSED\n";
     }
@@ -467,14 +459,14 @@ private:
 
         if (online_clients_.contains(receiver))
         {
-            online_clients_[receiver].socket->send(boost::asio::buffer(client_data));
+            online_clients_.at(receiver).socket->send(boost::asio::buffer(client_data));
         }
         else
         {
             MessageQueue::get_queue().add_msg(receiver, false, client_data);
         }
     }
-
+    
 private:
 
     static void build_response(ptree& tree, SERVER_RESP_CODES rc, int id)
@@ -483,12 +475,40 @@ private:
         tree.put(SERVER_RESPONSE::id, id);
     }
 
+    void send_data(const std::string& data, int recv)
+    {
+        std::cout << "SEND MESSAGE TO: " << recv << '\n';
+
+        std::vector<uint8_t> encrypted;
+
+        if (online_clients_.contains(recv))
+        {
+            encrypted = Cryptographer::get_cryptographer()->encrypt_AES(data, online_clients_.at(recv).public_key);
+            encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
+
+            std::lock_guard<std::mutex> lock_g(online_clients_.at(recv).mtx);  
+            online_clients_.at(recv).socket->send(boost::asio::buffer(encrypted));
+            std::cout << "MESSAGE WAS SENT TO " << recv << "\n";
+        }
+        else
+        {
+            encrypted.insert(encrypted.end(), data.begin(), data.end());
+            MessageQueue::get_queue().add_msg(recv, true, encrypted);
+        }
+    }
+
 private:
 
     struct Client
     {
         SOCKET socket;
+        std::mutex mtx;
         std::string public_key;
+
+        Client() = default;
+
+        explicit Client(SOCKET sock, const std::string& key)
+            : socket(sock), public_key(key) {};
     };
 
     boost::asio::io_service& io_;

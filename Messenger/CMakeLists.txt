@@ -32,6 +32,7 @@ set(PROJECT_SOURCES
     src/Client/client.cpp
     src/Client/cryptographer.cpp
     src/Client/dbmanager.cpp
+    src/Client/timer.cpp
     
     include/GUI/mainwindow.h
     include/GUI/loginwindow.h
@@ -46,6 +47,7 @@ set(PROJECT_SOURCES
     include/Client/client.h
     include/Client/cryptographer.h
     include/Client/dbmanager.h
+    include/Client/timer.h
     include/common_defs.h
     
     ui/mainwindow.ui

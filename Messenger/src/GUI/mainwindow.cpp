@@ -14,6 +14,10 @@ MainWindow::MainWindow(QWidget *parent)
     msg_fld_->show();
     msg_fld_->hide();
 
+    ui->new_chat_button->show();
+    ui->chat_settings_button->hide();
+    ui->P2P_button->hide();
+
     connect(msg_fld_, &MessageEntryField::send_msg,
             this, &MainWindow::send_msg);
 }
@@ -37,6 +41,34 @@ void MainWindow::set_contacts(const std::vector<Contact> &contacts)
 void MainWindow::set_id(const int id)
 {
     my_id_ = id;
+}
+
+void MainWindow::update_message_field()
+{
+    qDebug() << __func__ << '\n';
+    messages_.clear();
+    msg_forms_.clear();
+    display_messages();
+
+    ui->new_chat_button->show();
+    ui->chat_settings_button->hide();
+    ui->P2P_button->hide();
+
+    ui->dialog_name_label->setText("");
+    msg_fld_->hide();
+}
+
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == ui->dialogs_list && event->type() == QEvent::FocusOut)
+    {
+        ui->dialogs_list->clearSelection();
+        ui->dialogs_list->clearFocus();
+
+        update_message_field();
+    }
+
+    return QWidget::eventFilter(watched, event);
 }
 
 void MainWindow::setup_panel()
@@ -69,6 +101,16 @@ void MainWindow::setup_icons()
     ui->P2P_button->setIcon(QIcon(":/main_window/main_window/P2P.png"));
 
     qDebug() << "leave " << __func__ << '\n';
+}
+
+void MainWindow::setup_timer(const ClientMessage &msg, const std::vector<int>& ids)
+{
+    qDebug() << "VANISHING MESSAGE!\n";
+    Timer* timer = new Timer(this);
+    qint64 time = QDateTime::currentSecsSinceEpoch() +
+                  msg.text.size() / avg_reading_speed + addl_time;
+    timer->start(time, SYSTEM_MSG::DELETE_MESSAGE, ids);
+    QObject::connect(timer, &Timer::timeout, this, &MainWindow::delete_messages);
 }
 
 void MainWindow::resizeEvent(QResizeEvent* event)
@@ -150,11 +192,11 @@ void MainWindow::display_contacts()
     qDebug() << "leave " << __func__ << '\n';
 }
 
-void MainWindow::add_message(const ClientMessage& msg)
+void MainWindow::add_message(const ClientMessage& msg, const std::vector<int> ids)
 {
     qDebug() << __func__ << '\n';
 
-    Contact* contact = get_contact_from_lst();
+    Contact* const contact = get_contact_from_lst();
     if (contact == nullptr) return;
 
     messages_.push_back(msg);
@@ -175,13 +217,10 @@ void MainWindow::add_message(const ClientMessage& msg)
     QModelIndex index = model->index(model->rowCount() - 1, 0);
     ui->messages_window->setIndexWidget(index, &*msg_forms_.back());
 
-    // qDebug() << msg_forms_.back()->msg->text << '\n';
-
-    // if (messages_.size() > max_msg_count)
-    // {
-    //     messages_.pop_back();
-    //     msg_forms_.pop_back();
-    // }
+    if (msg.vanishing)
+    {
+        setup_timer(msg, ids);
+    }
 
     qDebug() << "leave " << __func__ << '\n';
 }
@@ -203,6 +242,11 @@ void MainWindow::display_messages()
 
         QModelIndex index = model->indexFromItem(item);
         ui->messages_window->setIndexWidget(index, &*msg_forms_[i]);
+
+        if (messages_[i].vanishing)
+        {
+            setup_timer(messages_[i], { messages_[i].id });
+        }
     }
 
     ui->messages_window->scrollToBottom();
@@ -222,11 +266,11 @@ Contact* MainWindow::get_contact_from_lst()
     return row < 0 ? nullptr : &contacts_[row];
 }
 
-void MainWindow::send_msg(const QString& text)
+void MainWindow::send_msg(bool vanishing, const QString& text)
 {
     qDebug() << __func__ << '\n';
 
-    Contact* contact = get_contact_from_lst();
+    Contact* const contact = get_contact_from_lst();
     if (contact == nullptr) return;
 
     int client_id = contact->id;
@@ -244,26 +288,29 @@ void MainWindow::send_msg(const QString& text)
         .receiver = chat_id == -1 ? std::vector{ client_id } : contact->participants,
         .text = text.toStdString(),
         .timestamp = generate_timestamp(),
-        .chat = chat_id
+        .chat = chat_id,
+        .vanishing = vanishing
     };
+
+    qDebug() << "VANISHING?" << msg.vanishing;
 
     emit send_message(msg);
 
     qDebug() << "leave " << __func__ << '\n';
 }
 
-void MainWindow::receive_msg(const ClientMessage& msg)
+void MainWindow::receive_msg(const ClientMessage& msg, const std::vector<int> ids)
 {
     qDebug() << __func__ << '\n';
 
     qDebug() << "Prepare to display" << msg.sender_id << ' ' << msg.text << '\n';
 
-    if (Contact* contact = get_contact_from_lst(); contact != nullptr)
+    if (Contact* const contact = get_contact_from_lst(); contact != nullptr)
     {
         qDebug() << msg.receiver_id << ' ' << contact->id << '\n';
         if (!msg_fld_->isHidden() && (msg.sender_id == contact->id) || msg.chat == contact->chat)
         {
-            add_message(msg);
+            add_message(msg, ids);
         }
     }
 
@@ -303,7 +350,7 @@ void MainWindow::loaded_messages(const std::deque<ClientMessage>& msgs)
 {
     qDebug() << __func__ << '\n';
 
-    Contact* contact = get_contact_from_lst();
+    Contact* const contact = get_contact_from_lst();
     if (contact == nullptr) return;
 
     ui->dialog_name_label->setText(QString::fromStdString(contact->name));
@@ -315,12 +362,13 @@ void MainWindow::loaded_messages(const std::deque<ClientMessage>& msgs)
 
     for(int i = 0; i < max_msg_count && i < messages_.size(); i++)
     {
+        // if (messages_[i].)
         msg_forms_.emplace_back(new MessageForm(&messages_[i], messages_[i].sender_id != my_id_));
 
-        qDebug() << "ID: " << contact->id << '\n';
-        qDebug() << "Sender: " << messages_[i].sender << ' ' << contact->name << ' ' << (messages_[i].sender != contact->name) << '\n';
+        // qDebug() << "ID: " << contact->id << '\n';
+        // qDebug() << "Sender: " << messages_[i].sender << ' ' << contact->name << ' ' << (messages_[i].sender != contact->name) << '\n';
 
-        qDebug() << "MSG TEXT: " << messages_[i].text << '\n';
+        // qDebug() << "MSG TEXT: " << messages_[i].text << '\n';
     }
 
     display_messages();
@@ -328,10 +376,10 @@ void MainWindow::loaded_messages(const std::deque<ClientMessage>& msgs)
     qDebug() << "leave " << __func__ << '\n';
 }
 
-void MainWindow::display_sent_msg(const ClientMessage &msg)
+void MainWindow::display_sent_msg(const ClientMessage &msg, const std::vector<int>& ids)
 {
     qDebug() << __func__ << '\n';
-    add_message(msg);
+    add_message(msg, ids);
     qDebug() << "leave" << __func__ << '\n';
 }
 
@@ -363,8 +411,35 @@ void MainWindow::create_new_chat(const QString &name, qint64 time, const std::ve
     std::copy_if(members.begin(), members.end(), std::back_inserter(mems), [](int mem){ return mem > 0; });
 
     for(int i : mems) qDebug() << "CR NEW CHT: " << i << '\n';
+    qDebug() << "TIME OF CHAT:" << time;
     emit new_chat(name, time, mems);
     qDebug() << "leave" << __func__ << '\n';
+}
+
+void MainWindow::delete_messages(int type, const std::vector<int> &msgs_ids)
+{
+    qDebug() << __func__ << '\n';
+
+    // Contact* const cn = get_contact_from_lst();
+
+    // if (cn == nullptr) return;
+    // if (cn->id != contact_id) return;
+
+    // emit load_messages(cn->id != -1, contact_id);
+
+    if (type == SYSTEM_MSG::DELETE_MESSAGE)
+    {
+        int sender = messages_[0].sender_id;
+        int receiver = messages_[0].receiver_id;
+        int chat = messages_[0].chat;
+
+        qDebug() << __func__ << "IDs TO BE DELETED:";
+        for(int id : msgs_ids) qDebug() << id;
+        qDebug() << '\n';
+
+        emit delete_messages_sig(msgs_ids);
+        emit load_messages(chat == -1, chat != -1 ? chat : (sender == my_id_ ? receiver : sender));
+    }
 }
 
 void MainWindow::on_new_chat_button_pressed()
@@ -416,6 +491,18 @@ void MainWindow::on_dialogs_list_clicked(const QModelIndex& index)
     int id = is_client ? contact.id : contact.chat;
 
     emit load_messages(is_client, id);
+
+    ui->new_chat_button->hide();
+    if (contact.id != -1)
+    {
+        ui->chat_settings_button->hide();
+        ui->P2P_button->show();
+    }
+    else
+    {
+        ui->chat_settings_button->show();
+        ui->P2P_button->hide();
+    }
 
     msg_fld_->show();
 
