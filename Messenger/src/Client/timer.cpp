@@ -11,7 +11,7 @@ void Timer::start(qint64 time, int signal, const std::vector<int>& ids)
 
     qDebug() << "\n--------\n" << diff << "\n--------\n";
 
-    QTimer::singleShot(diff * 1000, this, [=]() {
+    QTimer::singleShot(diff * 1000, this, [=, this]() {
         emit timeout(signal, ids);
         qDebug() << "SIGNAL EMITTED\n";
     });

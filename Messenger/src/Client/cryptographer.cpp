@@ -179,9 +179,9 @@ EVP_PKEY* Cryptographer::deserialize_private_key(const std::string& key)
 
 EVP_PKEY* Cryptographer::deserialize_public_key(const std::string& key)
 {
-    qDebug() << __func__ << '\n';
+    //qDebug() << __func__ << '\n';
 
-    qDebug() << "KEY OF CLIENT" << key << '\n';
+    //qDebug() << "KEY OF CLIENT" << key << '\n';
     assert(key.size() != 0);
 
     BIO* mem = BIO_new_mem_buf(key.data(), static_cast<int>(key.size()));
@@ -197,8 +197,8 @@ EVP_PKEY* Cryptographer::deserialize_public_key(const std::string& key)
 
 Cryptographer::AES_VECTOR Cryptographer::encrypt_AES(const std::string& plaintext, const std::string& pub_key)
 {
-    qDebug() << __func__ << '\n';
-    qDebug() << "PUB_KEY:" << pub_key << '\n';
+    //qDebug() << __func__ << '\n';
+    //qDebug() << "PUB_KEY:" << pub_key << '\n';
     auto result = encrypt_AES_msg(plaintext, pub_key);
 
     std::vector<uint8_t> full_message;
@@ -206,26 +206,26 @@ Cryptographer::AES_VECTOR Cryptographer::encrypt_AES(const std::string& plaintex
     full_message.insert(full_message.end(), result.aes_iv.begin(), result.aes_iv.end());
     full_message.insert(full_message.end(), result.aes_encrypted_data.begin(), result.aes_encrypted_data.end());
 
-    qDebug() << "AES DATA ENCRYPT\n";
+    // qDebug() << "AES DATA ENCRYPT\n";
 
-    qDebug() << "KEY\n";
-    for(uint8_t c : result.rsa_encrypted_key) qDebug() << (int)c;
-    qDebug() << "\n\n";
-    qDebug() << "IV\n";
-    for(uint8_t c : result.aes_iv) qDebug() << (int)c;
-    qDebug() << "\n\n";
-    qDebug() << "AES\n";
-    for(uint8_t c : result.aes_encrypted_data) qDebug() << (int)c;
-    qDebug() << "\n\n";
+    // qDebug() << "KEY\n";
+    // for(uint8_t c : result.rsa_encrypted_key) qDebug() << (int)c;
+    // qDebug() << "\n\n";
+    // qDebug() << "IV\n";
+    // for(uint8_t c : result.aes_iv) qDebug() << (int)c;
+    // qDebug() << "\n\n";
+    // qDebug() << "AES\n";
+    // for(uint8_t c : result.aes_encrypted_data) qDebug() << (int)c;
+    // qDebug() << "\n\n";
 
-    qDebug() << "leave " << __func__ << '\n';
+    // qDebug() << "leave " << __func__ << '\n';
 
     return full_message;
 }
 
 std::string Cryptographer::decrypt_AES(const AES_VECTOR& buffer)
 {
-    qDebug() << __func__ << " public" << '\n';
+    // qDebug() << __func__ << " public" << '\n';
     size_t offset = 0;
     AES_VECTOR encrypted_aes_key(buffer.begin(), buffer.begin() + 256);
     offset += 256;
@@ -235,19 +235,19 @@ std::string Cryptographer::decrypt_AES(const AES_VECTOR& buffer)
 
     AES_VECTOR ciphertext(buffer.begin() + offset, buffer.end());
 
-    qDebug() << "AES DATA\n";
+    // qDebug() << "AES DATA\n";
 
-    qDebug() << "KEY\n";
-    for(uint8_t c : encrypted_aes_key) qDebug() << (int)c << ' ';
-    qDebug() << "\n\n";
-    qDebug() << "IV\n";
-    for(uint8_t c : aes_iv) qDebug() << (int)c << ' ';
-    qDebug() << "\n\n";
-    qDebug() << "AES\n";
-    for(uint8_t c : ciphertext) qDebug() << (int)c << ' ';
-    qDebug() << "\n\n";
+    // qDebug() << "KEY\n";
+    // for(uint8_t c : encrypted_aes_key) qDebug() << (int)c << ' ';
+    // qDebug() << "\n\n";
+    // qDebug() << "IV\n";
+    // for(uint8_t c : aes_iv) qDebug() << (int)c << ' ';
+    // qDebug() << "\n\n";
+    // qDebug() << "AES\n";
+    // for(uint8_t c : ciphertext) qDebug() << (int)c << ' ';
+    // qDebug() << "\n\n";
 
-    qDebug() << "leave " << __func__ << " public" << '\n';
+    // qDebug() << "leave " << __func__ << " public" << '\n';
 
     return decrypt_AES({ encrypted_aes_key, aes_iv, ciphertext });
 }
@@ -346,21 +346,21 @@ Cryptographer::AES_VECTOR Cryptographer::decrypt_AES_key_RSA(const Cryptographer
 
 Cryptographer::EncryptedPayload Cryptographer::encrypt_AES_msg(const std::string& plaintext, const std::string& pubkey)
 {
-    qDebug() << __func__ << '\n';
+    // qDebug() << __func__ << '\n';
 
-    qDebug() << "PUBKEY:" << pubkey << '\n';
+    // qDebug() << "PUBKEY:" << pubkey << '\n';
 
     auto [aes_key, aes_iv] = generate_AES_key();
 
-    qDebug() << "DECRYPTED KEY\n";
-    for(uint8_t c : aes_key) qDebug() << ' ' << (int)c;
-    qDebug() << "\n\n";
+    // qDebug() << "DECRYPTED KEY\n";
+    // for(uint8_t c : aes_key) qDebug() << ' ' << (int)c;
+    // qDebug() << "\n\n";
 
     auto key = encrypt_AES_key_RSA(aes_key, deserialize_public_key(pubkey));
 
-    qDebug() << "ENCRYPTED KEY\n";
-    for(uint8_t c : key) qDebug() << ' ' << (int)c;
-    qDebug() << "\n\n";
+    // qDebug() << "ENCRYPTED KEY\n";
+    // for(uint8_t c : key) qDebug() << ' ' << (int)c;
+    // qDebug() << "\n\n";
 
     AES_VECTOR ciphertext(plaintext.size() + AES_BLOCK_SIZE);
     int len = 0, ciphertext_len = 0;

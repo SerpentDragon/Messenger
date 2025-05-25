@@ -11,6 +11,13 @@ constexpr int max_msg_count = 20;
 constexpr int avg_reading_speed = 20;
 constexpr int addl_time = 5;
 
+enum CONNECTION_STATUS : unsigned short
+{
+    SUCCESSFUL      = 0,
+    SERVER_FALLBACK = 1,
+    DISCONNECTED    = 2
+};
+
 using ULL = unsigned long long;
 
 // data structures and functions
@@ -24,6 +31,7 @@ struct SocketMessage
     ULL timestamp;
     int chat;
     bool vanishing;
+    bool p2p;
 };
 
 struct ClientMessage

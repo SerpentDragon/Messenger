@@ -86,11 +86,15 @@ public slots:
 
     void delete_messages(int type, const std::vector<int>& msgs_ids);
 
+    void set_P2P_status(int id, bool status, CONNECTION_STATUS cn_st);
+
 private slots:
 
     void on_new_chat_button_pressed();
 
     void on_chat_settings_button_pressed();
+
+    void on_P2P_button_pressed();
 
     void on_dialog_search_edit_returnPressed();
 
@@ -113,6 +117,10 @@ signals:
     void new_chat(const QString& name, qint64 time, const std::vector<int> members);
 
     void delete_messages_sig(const std::vector<int>& ids);
+
+    void establish_p2p_connection(int id);
+
+    void close_p2p_connection(int id);
 
 private:
 

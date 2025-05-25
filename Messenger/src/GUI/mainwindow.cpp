@@ -289,7 +289,8 @@ void MainWindow::send_msg(bool vanishing, const QString& text)
         .text = text.toStdString(),
         .timestamp = generate_timestamp(),
         .chat = chat_id,
-        .vanishing = vanishing
+        .vanishing = vanishing,
+        .p2p = contact->p2p
     };
 
     qDebug() << "VANISHING?" << msg.vanishing;
@@ -442,6 +443,41 @@ void MainWindow::delete_messages(int type, const std::vector<int> &msgs_ids)
     }
 }
 
+void MainWindow::set_P2P_status(int id, bool status, CONNECTION_STATUS cn_st)
+{
+    qDebug() << __func__ << '\n';
+    QString name;
+
+    for(auto& cn : contacts_)
+    {
+        if (cn.id == id)
+        {
+            qDebug() << "Status changed\n";
+            cn.p2p = status;
+            name = QString::fromStdString(cn.name);
+            break;
+        }
+    }
+
+    qDebug() << "MSGBOX";
+
+    if (cn_st == CONNECTION_STATUS::SUCCESSFUL)
+    {
+        QMessageBox::information(this, "Success", "P2P connection to " + name + " is successful!");
+    }
+    else if (cn_st == CONNECTION_STATUS::SERVER_FALLBACK)
+    {
+        QMessageBox::critical(this, "Error", "Unable to establish P2P connection to " + name +
+                              ". Your messages will be transmitted through the server");
+    }
+    else if (cn_st == CONNECTION_STATUS::DISCONNECTED)
+    {
+        QMessageBox::critical(this, "Error", "Disconnected from " + name);
+    }
+
+    qDebug() << "leave" << __func__ << '\n';
+}
+
 void MainWindow::on_new_chat_button_pressed()
 {
     chat_params_wnd_ = new ChatParamsWindow(this);
@@ -456,6 +492,30 @@ void MainWindow::on_chat_settings_button_pressed()
 {
     chat_params_wnd_ = new ChatParamsWindow(this);
     chat_params_wnd_->show();
+}
+
+void MainWindow::on_P2P_button_pressed()
+{
+    qDebug() << __func__ << '\n';
+
+    if (Contact* contact = get_contact_from_lst(); contact)
+    {
+        bool p2p = contact->p2p;
+        contact->p2p = !contact->p2p;
+
+        if (p2p == false)
+        {
+            qDebug() << "establish" << '\n';
+            emit establish_p2p_connection(contact->id);
+        }
+        else
+        {
+            qDebug() << "close" << '\n';
+            emit close_p2p_connection(contact->id);
+        }
+    }
+
+    qDebug() << "leave" << __func__ << '\n';
 }
 
 void MainWindow::on_dialog_search_edit_returnPressed()
@@ -508,4 +568,3 @@ void MainWindow::on_dialogs_list_clicked(const QModelIndex& index)
 
     qDebug() << "Index row: " << row << '\n';
 }
-

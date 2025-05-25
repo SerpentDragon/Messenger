@@ -80,7 +80,7 @@ void Client::read()
 
                     read();
                 }
-        });
+            });
 }
 
 void Client::process_in_msg(const std::string& message)
@@ -246,6 +246,25 @@ void Client::process_system_msg_respond()
 
         break;
     }
+    case SYSTEM_MSG::GET_REMOTE_PEER_IP:
+    {
+        std::string remote_ip = tree_.get<std::string>(SYSTEM_MSG_DATA::ip);
+        int contact_id = tree_.get<int>(SYSTEM_MSG_DATA::contact);
+
+        if (remote_ip != "-1")
+        {
+            int local_port = tree_.get<int>(SYSTEM_MSG_DATA::local_port);
+            int remote_port = tree_.get<int>(SYSTEM_MSG_DATA::remote_port);
+
+            qDebug() << remote_ip << contact_id << local_port << remote_port;
+
+            set_P2P_status(contact_id, true, CONNECTION_STATUS::SUCCESSFUL);
+            create_P2P_connection(contact_id, local_port, remote_ip, remote_port);
+        }
+        else set_P2P_status(contact_id, false, CONNECTION_STATUS::SERVER_FALLBACK);
+
+        break;
+    }
     }
 
     addl_data.clear();
@@ -284,6 +303,19 @@ void Client::build_in_msg(SocketMessage& msg)
     msg.vanishing = tree_.get<bool>(MSG_TAGS::vanishing);
 }
 
+void Client::create_P2P_connection(int id, int local_port, const std::string &remote_ip, int remote_port)
+{
+    qDebug() << local_port << remote_ip << remote_port << '\n';
+
+    auto p2p_connector = std::make_unique<P2PConnector>(io_, id_, id, local_port, remote_ip,
+                                                        remote_port, client_public_keys_.at(id));
+    auto [it, _] = p2p_connections_.insert({ id, std::move(p2p_connector) });
+
+    p2p_connections_[id]->start_p2p_connection();
+    QObject::connect(&*it->second, &P2PConnector::receive_msg, this, &Client::receive_p2p_msg);
+    QObject::connect(&*it->second, &P2PConnector::close, this, &Client::close_p2p_connection);
+}
+
 void Client::log_in_user(bool log_in, const std::string& nickname, const std::string& password)
 {
     tree_.clear();
@@ -307,41 +339,52 @@ void Client::log_in_user(bool log_in, const std::string& nickname, const std::st
 
 void Client::write(SocketMessage& msg)
 {
-    msg.sender = id_;
-
-    for(int i = 0; i < msg.receiver.size(); i++)
+    if (msg.p2p == false)
     {
-        if (msg.receiver[i] == id_) continue;
+        msg.sender = id_;
 
-        tree_.clear();
+        for(int i = 0; i < msg.receiver.size(); i++)
+        {
+            if (msg.receiver[i] == id_) continue;
 
-        tree_.put(MSG_TAGS::system, false);
-        tree_.put(MSG_TAGS::sender, msg.sender);
-        tree_.put(MSG_TAGS::receiver, msg.receiver[i]);
-        tree_.put(MSG_TAGS::text, msg.text);
-        tree_.put(MSG_TAGS::timestamp, msg.timestamp);
-        tree_.put(MSG_TAGS::chat, msg.chat);
-        tree_.put(MSG_TAGS::vanishing, msg.vanishing);
+            tree_.clear();
 
-        std::stringstream ss;
-        boost::property_tree::write_xml(ss, tree_);
+            tree_.put(MSG_TAGS::system, false);
+            tree_.put(MSG_TAGS::sender, msg.sender);
+            tree_.put(MSG_TAGS::receiver, msg.receiver[i]);
+            tree_.put(MSG_TAGS::text, msg.text);
+            tree_.put(MSG_TAGS::timestamp, msg.timestamp);
+            tree_.put(MSG_TAGS::chat, msg.chat);
+            tree_.put(MSG_TAGS::vanishing, msg.vanishing);
 
-        qDebug() << "send: " << ss.str() << '\n';
+            std::stringstream ss;
+            boost::property_tree::write_xml(ss, tree_);
 
-        qDebug() << "CLIENT ID:" << msg.receiver[i];
+            qDebug() << "send: " << ss.str() << '\n';
 
-        qDebug() << "USED PUBLIC KEY:" << client_public_keys_[msg.receiver[i]];
+            qDebug() << "CLIENT ID:" << msg.receiver[i];
 
-        auto encrypted = Cryptographer::get_cryptographer()->encrypt_AES(ss.str(), client_public_keys_[msg.receiver[i]]);
+            qDebug() << "USED PUBLIC KEY:" << client_public_keys_[msg.receiver[i]];
 
-        std::string recv_data = recv_open_tag + std::to_string(msg.receiver[i]) + recv_close_tag;
-        encrypted.insert(encrypted.begin(), recv_data.begin(), recv_data.end());
-        encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
+            auto encrypted = Cryptographer::get_cryptographer()->encrypt_AES(ss.str(), client_public_keys_[msg.receiver[i]]);
 
-        socket_.send(boost::asio::buffer(encrypted));
+            std::string recv_data = recv_open_tag + std::to_string(msg.receiver[i]) + recv_close_tag;
+            encrypted.insert(encrypted.begin(), recv_data.begin(), recv_data.end());
+            encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
+
+            socket_.send(boost::asio::buffer(encrypted));
+        }
+
+        for(int recv : msg.receiver) qDebug() << "WRITE RECV:" << recv;
     }
-
-    for(int recv : msg.receiver) qDebug() << "WRITE RECV:" << recv;
+    else
+    {
+        int receiver = msg.receiver[0];
+        if (p2p_connections_.contains(receiver))
+        {
+            p2p_connections_[receiver]->send(msg);
+        }
+    }
 
     emit send_msg(msg);
 }
@@ -362,6 +405,7 @@ void Client::send_system_msg(SYSTEM_MSG type, const std::vector<QString>& data)
     }
     case SYSTEM_MSG::FIND_CONTACT:
     case SYSTEM_MSG::GET_CONTACT:
+    case SYSTEM_MSG::GET_REMOTE_PEER_IP:
     {
         tree_.put(SYSTEM_MSG_DATA::contact, data[0].toStdString());
         break;
@@ -392,7 +436,6 @@ void Client::send_system_msg(SYSTEM_MSG type, const std::vector<QString>& data)
 
     qDebug() << "PROCESS_MSG: " << ss.str() << '\n';
 
-    // here
     socket_.send(boost::asio::buffer(encrypted));
 }
 
@@ -423,4 +466,34 @@ void Client::new_chat(const QString &name, qint64 time, const std::vector<int> m
     }
 
     send_system_msg(SYSTEM_MSG::NEW_GROUP_CHAT, data);
+}
+
+void Client::establish_p2p_connection(int id)
+{
+    if (p2p_connections_.contains(id)) return;
+
+    qDebug() << "SEND SYSTEM MSG TO ESTABLISH P2P";
+
+    send_system_msg(SYSTEM_MSG::GET_REMOTE_PEER_IP, { QString::number(id) });
+}
+
+void Client::close_p2p_connection(int id)
+{
+    qDebug() << __func__ << id << '\n';
+
+    if (p2p_connections_.contains(id))
+    {
+        p2p_connections_[id]->close_p2p_connection();
+        p2p_connections_.erase(id);
+
+        qDebug() << "P2P CONNECTION IS CLOSED!\n";
+
+        emit set_P2P_status(id, false, CONNECTION_STATUS::DISCONNECTED);
+    }
+    qDebug() << "leave" << __func__ << '\n';
+}
+
+void Client::receive_p2p_msg(const SocketMessage& msg)
+{
+    emit receive_msg(msg);
 }

@@ -33,7 +33,8 @@ set(PROJECT_SOURCES
     src/Client/cryptographer.cpp
     src/Client/dbmanager.cpp
     src/Client/timer.cpp
-    
+    src/Client/p2pconnector.cpp
+
     include/GUI/mainwindow.h
     include/GUI/loginwindow.h
     include/GUI/slidepanel.h
@@ -48,6 +49,7 @@ set(PROJECT_SOURCES
     include/Client/cryptographer.h
     include/Client/dbmanager.h
     include/Client/timer.h
+    include/Client/p2pconnector.h
     include/common_defs.h
     
     ui/mainwindow.ui

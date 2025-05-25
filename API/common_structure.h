@@ -13,6 +13,7 @@ struct Contact
     int chat;
     std::vector<int> participants;
     bool saved_in_db;
+    bool p2p = false;
 
     inline std::string serialize(char delimiter = ';') const
     {

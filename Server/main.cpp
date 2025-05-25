@@ -7,6 +7,7 @@
 #include <iterator>
 #include <mutex>
 #include <pqxx/pqxx>
+#include <random>
 #include <sstream>
 #include <unordered_map>
 
@@ -406,6 +407,46 @@ private:
 
                 break;
             }
+            case SYSTEM_MSG::GET_REMOTE_PEER_IP:
+            {
+                int contact_id = tree_.get<int>(SYSTEM_MSG_DATA::contact);
+
+                tree_.clear();
+                tree_.put(SYSTEM_MSG_DATA::contact, contact_id);
+
+                if (online_clients_.contains(contact_id))
+                {
+                    auto sender_endpoint = online_clients_.at(sender).socket->remote_endpoint();
+                    int sender_port = sender_endpoint.port();
+
+                    auto remote_endpoint = online_clients_.at(contact_id).socket->remote_endpoint();
+                    std::string remote_ip = remote_endpoint.address().to_string();
+                    int remote_port = remote_endpoint.port();
+
+                    int sender_p2p_port, receiver_p2p_port;
+                    while ((sender_p2p_port = generate_port_number()) == sender_port);
+                    while (true)
+                    {
+                        receiver_p2p_port = generate_port_number();
+                        if (receiver_p2p_port != remote_port && 
+                            receiver_p2p_port != sender_p2p_port) break;
+                    }
+
+                    tree_.put(SYSTEM_MSG_DATA::ip, remote_ip);
+                    
+                    tree_.put(SYSTEM_MSG_DATA::local_port, sender_p2p_port);
+                    tree_.put(SYSTEM_MSG_DATA::remote_port, receiver_p2p_port);
+                    send_system_msg(SYSTEM_MSG::GET_REMOTE_PEER_IP, 
+                        { std::to_string(sender), std::to_string(contact_id),
+                        std::to_string(receiver_p2p_port), std::to_string(sender_p2p_port) });
+                }
+                else
+                {
+                    tree_.put(SYSTEM_MSG_DATA::ip, "-1");
+                }                
+
+                break;
+            }
             default:
             {
                 std::cout << "Unknown system msg!\n";
@@ -419,10 +460,8 @@ private:
         ss = std::stringstream();
         boost::property_tree::write_xml(ss, tree_);
 
-        std::vector<uint8_t> encrypted;
-
         std::cout << "PREPARE TO SEND---------------------------------\n" << ss.str() << 
-            "--------------------------------------------------" << '\n';
+            "\n--------------------------------------------------" << '\n';
 
         if (cmd == SYSTEM_MSG::NEW_GROUP_CHAT)
         {
@@ -467,12 +506,53 @@ private:
         }
     }
     
+    void send_system_msg(SYSTEM_MSG msg_type, const std::vector<std::string>& params)
+    {
+        ptree pt;
+
+        pt.put(SYSTEM_MSG_DATA::system, true);
+        pt.put(SYSTEM_MSG_DATA::cmd, msg_type);
+
+        if (msg_type == SYSTEM_MSG::GET_REMOTE_PEER_IP)
+        {
+            int initiator = std::stoi(params[0]);
+            int addressee = std::stoi(params[1]);
+            int local_port = std::stoi(params[2]);
+            int remote_port = std::stoi(params[3]);
+
+            if (online_clients_.contains(initiator))
+            {
+                auto endpoint = online_clients_.at(initiator).socket->remote_endpoint();
+                std::string remote_ip = endpoint.address().to_string();
+
+                pt.put(SYSTEM_MSG_DATA::ip, remote_ip);
+                pt.put(SYSTEM_MSG_DATA::contact, initiator);
+                pt.put(SYSTEM_MSG_DATA::local_port, local_port);
+                pt.put(SYSTEM_MSG_DATA::remote_port, remote_port);
+
+                std::stringstream ss;
+                boost::property_tree::write_xml(ss, pt);
+
+                send_data(ss.str(), addressee);
+            }
+        }
+    }
+
 private:
 
     static void build_response(ptree& tree, SERVER_RESP_CODES rc, int id)
     {
         tree.put(SERVER_RESPONSE::status, rc);
         tree.put(SERVER_RESPONSE::id, id);
+    }
+
+    static int generate_port_number()
+    {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dist(50'000, 60'000);
+
+        return dist(gen);
     }
 
     void send_data(const std::string& data, int recv)

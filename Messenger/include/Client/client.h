@@ -6,6 +6,7 @@
 #include "../../../API/common_structure.h"
 #include "../common_defs.h"
 #include "cryptographer.h"
+#include "p2pconnector.h"
 
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
@@ -49,6 +50,8 @@ private:
     
     void build_in_msg(SocketMessage& msg);
 
+    void create_P2P_connection(int id, int local_port, const std::string& remote_ip, int remote_port);
+
 public slots:
 
     void log_in_user(bool log_in, const std::string& nickname, const std::string& password);
@@ -62,6 +65,12 @@ public slots:
     void update_keys_cash(const std::unordered_map<int, std::string>& cash);
 
     void new_chat(const QString& name, qint64 time, const std::vector<int> members);
+
+    void establish_p2p_connection(int id);
+
+    void close_p2p_connection(int id);
+
+    void receive_p2p_msg(const SocketMessage& msg);
 
 signals:
 
@@ -81,6 +90,8 @@ signals:
 
     void delete_chat(int chat_id);
 
+    void set_P2P_status(int id, bool status, CONNECTION_STATUS cn_st);
+
 private:
 
     boost::asio::io_service& io_;
@@ -97,8 +108,9 @@ private:
     std::vector<QString> addl_data;
 
     std::string server_public_key_;
-
     std::unordered_map<int, std::string> client_public_keys_;
+
+    std::unordered_map<int, std::unique_ptr<P2PConnector>> p2p_connections_;
 };
 
 #endif // CLIENT_H

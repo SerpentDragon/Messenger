@@ -91,6 +91,10 @@ private:
 
         QObject::connect(&db_manager_, &DBManager::delete_chat_sig, this, &ClientApplication::set_contacts_from_db);
         QObject::connect(&*main_window_, &MainWindow::delete_messages_sig, &db_manager_, &DBManager::delete_messages);
+
+        QObject::connect(&*main_window_, &MainWindow::establish_p2p_connection, &*client_, &Client::establish_p2p_connection);
+        QObject::connect(&*main_window_, &MainWindow::close_p2p_connection, &*client_, &Client::close_p2p_connection);
+        QObject::connect(&*client_, &Client::set_P2P_status, &*main_window_, &MainWindow::set_P2P_status);
     }
 
     void db_connect(bool log_in, int id, const std::string& nickname)
