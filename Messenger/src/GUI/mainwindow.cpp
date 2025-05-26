@@ -300,7 +300,7 @@ void MainWindow::send_msg(bool vanishing, const QString& text)
     qDebug() << "leave " << __func__ << '\n';
 }
 
-void MainWindow::receive_msg(const ClientMessage& msg, const std::vector<int> ids)
+void MainWindow::receive_msg(const ClientMessage& msg, const std::vector<int>& ids)
 {
     qDebug() << __func__ << '\n';
 

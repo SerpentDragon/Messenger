@@ -72,7 +72,7 @@ public slots:
 
     void send_msg(bool vanishing, const QString& text);
 
-    void receive_msg(const ClientMessage& msg, const std::vector<int> ids);
+    void receive_msg(const ClientMessage& msg, const std::vector<int>& ids);
 
     void list_of_contacts(const std::string& name, const std::vector<Contact>& contacts_from_srv);
 

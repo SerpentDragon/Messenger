@@ -1,10 +1,10 @@
 #pragma once
 
-inline constexpr int max_msg_length    = 5000;
-inline constexpr char msg_end[]        = "<END>";
-inline constexpr char recv_open_tag[]  = "<receiver>";
-inline constexpr char recv_close_tag[] = "</receiver>";
-inline constexpr char encryption[]  = "<encryption>";
+inline constexpr int max_msg_length          = 5000;
+inline constexpr char msg_end[]              = "<END>";
+inline constexpr char recv_open_tag[]        = "<receiver>";
+inline constexpr char recv_close_tag[]       = "</receiver>";
+inline constexpr char encryption[]           = "<encryption>";
 inline constexpr char encryption_close_tag[] = "</encryption>";
 
 namespace USER_DATA

@@ -7,9 +7,6 @@ enum SERVER_RESP_CODES : int
     NO_USER_NICKNAME,
     WRONG_NICKNAME_PSSWD,
     NICKNAME_TAKEN,
-
-
-    MAX_CODE
 };
 
 static inline SERVER_RESP_CODES int2SRV_RSP_CD(int val)

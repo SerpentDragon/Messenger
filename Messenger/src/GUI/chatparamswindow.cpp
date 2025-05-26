@@ -127,11 +127,11 @@ void ChatParamsWindow::on_OK_button_pressed()
     {
         date_time = ui->dateTimeEdit->dateTime();
 
-        // if(date_time < QDateTime::currentDateTime().addSecs(15 * 60))
-        // {
-        //     QMessageBox::critical(this, "Error", "No less then 15 min");
-        //     return;
-        // }
+        if(date_time < QDateTime::currentDateTime().addSecs(15 * 60))
+        {
+            QMessageBox::critical(this, "Error", "No less then 15 min");
+            return;
+        }
     }
 
     qint64 unix_time = date_time.isValid() ? date_time.toSecsSinceEpoch() : -1;
