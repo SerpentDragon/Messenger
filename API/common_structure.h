@@ -4,6 +4,13 @@
 #include <sstream>
 #include <vector>
 
+enum P2P_CONNECTION_TYPE : unsigned short
+{
+    FALSE  = 0,
+    SERVER = 1,
+    TRUE   = 2
+};
+
 struct Contact
 {
     int id;
@@ -13,7 +20,7 @@ struct Contact
     int chat;
     std::vector<int> participants;
     bool saved_in_db;
-    bool p2p = false;
+    P2P_CONNECTION_TYPE p2p = P2P_CONNECTION_TYPE::FALSE;
 
     inline std::string serialize(char delimiter = ';') const
     {

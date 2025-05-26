@@ -1,6 +1,8 @@
 #ifndef COMMON_DEFS_H
 #define COMMON_DEFS_H
 
+#include "../../API/common_structure.h"
+
 #include <chrono>
 #include <QString>
 #include <string>
@@ -11,7 +13,7 @@ constexpr int max_msg_count = 20;
 constexpr int avg_reading_speed = 20;
 constexpr int addl_time = 5;
 
-enum CONNECTION_STATUS : unsigned short
+enum P2P_CONNECTION_STATUS : unsigned short
 {
     SUCCESSFUL      = 0,
     SERVER_FALLBACK = 1,
@@ -31,7 +33,7 @@ struct SocketMessage
     ULL timestamp;
     int chat;
     bool vanishing;
-    bool p2p;
+    P2P_CONNECTION_TYPE p2p;
 };
 
 struct ClientMessage

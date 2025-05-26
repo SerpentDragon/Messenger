@@ -86,7 +86,7 @@ public slots:
 
     void delete_messages(int type, const std::vector<int>& msgs_ids);
 
-    void set_P2P_status(int id, bool status, CONNECTION_STATUS cn_st);
+    void set_P2P_status(int id, P2P_CONNECTION_TYPE cn_tp, P2P_CONNECTION_STATUS cn_st);
 
 private slots:
 

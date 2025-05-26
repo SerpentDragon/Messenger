@@ -40,7 +40,7 @@ private:
 
     void read();
 
-    void process_in_msg(const std::string& message);
+    void process_in_msg(std::string& message);
 
     void get_auth_resp();
 
@@ -72,6 +72,8 @@ public slots:
 
     void receive_p2p_msg(const SocketMessage& msg);
 
+    void p2p_connection_failed(int id);
+
 signals:
 
     void auth_resp(SERVER_RESP_CODES resp, int id);
@@ -90,7 +92,7 @@ signals:
 
     void delete_chat(int chat_id);
 
-    void set_P2P_status(int id, bool status, CONNECTION_STATUS cn_st);
+    void set_P2P_status(int id, P2P_CONNECTION_TYPE cn_tp, P2P_CONNECTION_STATUS cn_st);
 
 private:
 

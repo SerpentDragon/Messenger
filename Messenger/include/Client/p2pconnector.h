@@ -27,7 +27,7 @@ public:
 
     void start_p2p_connection();
 
-    void close_p2p_connection();
+    bool close_p2p_connection();
 
     void send(SocketMessage& msg);
 
@@ -51,6 +51,8 @@ signals:
 
     void receive_msg(const SocketMessage& msg);
 
+    void p2p_connection_failed(int recv_id);
+
     void close(int id);
 
 private:
@@ -63,6 +65,7 @@ private:
 
     tcp::acceptor acceptor_;
     tcp::socket socket_;
+    boost::asio::steady_timer timeout_timer_;
     bool connected_;
 
     int id_;

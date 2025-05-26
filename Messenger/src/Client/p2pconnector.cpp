@@ -5,10 +5,10 @@
 P2PConnector::P2PConnector(boost::asio::io_service& io, int id, int recv_id,
                            int local_port, const std::string& remote_ip,
                            int remote_port, const std::string& public_key)
-    : io_(io), remote_ip_(remote_ip), local_port_(local_port), id_(id), recv_id_(recv_id),
-    remote_port_(remote_port), client_public_key_(public_key), connected_(false),
+    : io_(io), remote_ip_(remote_ip), local_port_(local_port), remote_port_(remote_port),
     acceptor_(io, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), local_port_)),
-    socket_(io)
+    socket_(io), timeout_timer_(io), connected_(false), id_(id), recv_id_(recv_id),
+    client_public_key_(public_key)
 {
     qDebug() << "P2P PUBLIC KEY:" << client_public_key_;
 }
@@ -19,12 +19,20 @@ void P2PConnector::start_p2p_connection()
 
     connect_to_peer();
 
-    // return value to define unsuccessfull connections
+    timeout_timer_.expires_after(std::chrono::seconds(3));
+    timeout_timer_.async_wait([this](const boost::system::error_code& ec) {
+        if (!ec && !connected_)
+        {
+            socket_.close();
+            qDebug() << "P2P connection timeout: no incoming or outgoing connection established.";
+            emit p2p_connection_failed(recv_id_);
+        }
+    });
 }
 
-void P2PConnector::close_p2p_connection()
+bool P2PConnector::close_p2p_connection()
 {
-    if (!socket_.is_open()) return;
+    if (!socket_.is_open()) return false;
 
     tree_.clear();
     tree_.put(MSG_TAGS::system, true);
@@ -34,6 +42,8 @@ void P2PConnector::close_p2p_connection()
     write_to_socket();
 
     socket_.close();
+
+    return true;
 }
 
 void P2PConnector::send(SocketMessage &msg)

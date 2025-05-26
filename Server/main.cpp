@@ -447,6 +447,13 @@ private:
 
                 break;
             }
+            case SYSTEM_MSG::CLOSE_P2P_CONNECTION:
+            {
+                int recv_id = tree_.get<int>(SYSTEM_MSG_DATA::contact);
+                send_system_msg(SYSTEM_MSG::CLOSE_P2P_CONNECTION, 
+                    { std::to_string(recv_id), std::to_string(sender) });
+                return;
+            }
             default:
             {
                 std::cout << "Unknown system msg!\n";
@@ -535,6 +542,18 @@ private:
 
                 send_data(ss.str(), addressee);
             }
+        }
+        else if (msg_type == SYSTEM_MSG::CLOSE_P2P_CONNECTION)
+        {
+            int recv = std::stoi(params[0]);
+            int contact_id = std::stoi(params[1]);
+
+            pt.put(SYSTEM_MSG_DATA::contact, contact_id);
+
+            std::stringstream ss;
+            boost::property_tree::write_xml(ss, pt);
+
+            send_data(ss.str(), recv);
         }
     }
 

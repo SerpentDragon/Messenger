@@ -443,7 +443,7 @@ void MainWindow::delete_messages(int type, const std::vector<int> &msgs_ids)
     }
 }
 
-void MainWindow::set_P2P_status(int id, bool status, CONNECTION_STATUS cn_st)
+void MainWindow::set_P2P_status(int id, P2P_CONNECTION_TYPE cn_tp, P2P_CONNECTION_STATUS cn_st)
 {
     qDebug() << __func__ << '\n';
     QString name;
@@ -453,7 +453,7 @@ void MainWindow::set_P2P_status(int id, bool status, CONNECTION_STATUS cn_st)
         if (cn.id == id)
         {
             qDebug() << "Status changed\n";
-            cn.p2p = status;
+            cn.p2p = cn_tp;
             name = QString::fromStdString(cn.name);
             break;
         }
@@ -461,16 +461,16 @@ void MainWindow::set_P2P_status(int id, bool status, CONNECTION_STATUS cn_st)
 
     qDebug() << "MSGBOX";
 
-    if (cn_st == CONNECTION_STATUS::SUCCESSFUL)
+    if (cn_st == P2P_CONNECTION_STATUS::SUCCESSFUL)
     {
         QMessageBox::information(this, "Success", "P2P connection to " + name + " is successful!");
     }
-    else if (cn_st == CONNECTION_STATUS::SERVER_FALLBACK)
+    else if (cn_st == P2P_CONNECTION_STATUS::SERVER_FALLBACK)
     {
         QMessageBox::critical(this, "Error", "Unable to establish P2P connection to " + name +
                               ". Your messages will be transmitted through the server");
     }
-    else if (cn_st == CONNECTION_STATUS::DISCONNECTED)
+    else if (cn_st == P2P_CONNECTION_STATUS::DISCONNECTED)
     {
         QMessageBox::critical(this, "Error", "Disconnected from " + name);
     }
@@ -500,17 +500,16 @@ void MainWindow::on_P2P_button_pressed()
 
     if (Contact* contact = get_contact_from_lst(); contact)
     {
-        bool p2p = contact->p2p;
-        contact->p2p = !contact->p2p;
-
-        if (p2p == false)
+        if (contact->p2p == P2P_CONNECTION_TYPE::FALSE)
         {
             qDebug() << "establish" << '\n';
+            contact->p2p = P2P_CONNECTION_TYPE::TRUE;
             emit establish_p2p_connection(contact->id);
         }
         else
         {
             qDebug() << "close" << '\n';
+            contact->p2p = P2P_CONNECTION_TYPE::FALSE;
             emit close_p2p_connection(contact->id);
         }
     }
