@@ -32,29 +32,3 @@ CREATE TABLE ChatParticipants
 	FOREIGN KEY (client_id) REFERENCES Client(id),
 	FOREIGN KEY (chat_id) REFERENCES Chat(chat_id)
 );
-
-select * from Chat;
-
-delete from ChatParticipants;
-delete from Chat;
-
-delete from Client;
-
-delete from SystemData;
-
-delete from Client where nickname != 'Dmitry';
-
-select * from SystemData;
-
-select * from Client;
-
-insert into Client
-values
-	-- (8, 'Ivan', '1234', ''),
-	(9, 'misha_Ivan_max', '1234', ''),
-	(10, 'sashe', '1234', ''),
-	(11, 'da_Iva', '1234', ''),
-	(12, 'Ivannavi', '1234', ''),
-	(13, 'max', '1234', '');
-
-select * from Client;
