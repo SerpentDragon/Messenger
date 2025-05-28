@@ -36,7 +36,6 @@ private:
         stkw_.addWidget(&*login_window_);
         stkw_.addWidget(&*main_window_);
         stkw_.setCurrentWidget(&*login_window_);
-        // stkw_.setCurrentWidget(&*main_window_);
 
         login_window_->setParent(&stkw_);
         main_window_->setParent(&stkw_);
@@ -99,8 +98,6 @@ private:
 
     void db_connect(bool log_in, int id, const std::string& nickname)
     {
-        qDebug() << "PREPARE TO CONNECT\n";
-
         db_manager_.db_connect(log_in, id, nickname);
 
         std::pair<std::string,std::string> keys;
@@ -116,18 +113,12 @@ private:
         {
             keys = db_manager_.load_RSA_keys();
             Cryptographer::get_cryptographer()->deserialize_RSA_keys(keys);
-
-            qDebug() << "KEY FROM DB\n" << keys.second << "\n\n";
         }
 
         client_->send_system_msg(SYSTEM_MSG::LOAD_RSA_KEY, { QString::fromStdString(keys.second) });
 
-        qDebug() << "CONNECTED\n";
-
         main_window_->set_contacts(db_manager_.get_contacts_list());
         main_window_->set_id(id);
-
-        qDebug() << "CONTACTS ARE SET\n";
     }
 
     void set_contacts_from_db()
@@ -176,5 +167,3 @@ int main(int argc, char *argv[])
         return 1;
     }
 }
-        // QObject::connect(&*client_, &Client::delete_chat, this, &ClientApplication::set_contacts_from_db);
-

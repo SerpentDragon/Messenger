@@ -2,6 +2,7 @@
 #define CRYPTOGRAPHER_H
 
 #include <iomanip>
+#include <iostream>
 #include <openssl/aes.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>

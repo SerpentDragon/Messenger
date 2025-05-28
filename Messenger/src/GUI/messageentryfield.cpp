@@ -78,8 +78,6 @@ void MessageEntryField::send_msg_button_pressed()
 
     emit send_msg(vanishing_msg_chkbx_->isChecked(), msg_text);
 
-    qDebug() << "IS CHECKED?" << vanishing_msg_chkbx_->isChecked();
-
     vanishing_msg_chkbx_->setChecked(false);
 }
 

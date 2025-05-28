@@ -1,7 +1,5 @@
 #include "database.h"
 
-#include <iostream>
-
 DBServerManager::~DBServerManager()
 {
     connection_->close();
@@ -21,8 +19,6 @@ void DBServerManager::save_RSA_keys(const std::pair<std::string, std::string>& k
 {
     pqxx::work txn(*connection_);
 
-    std::cout << "TRY TO INSERT\n";
-
     auto result = txn.exec("SELECT * FROM SystemData;");
     if (!result.empty())
     {
@@ -36,9 +32,6 @@ void DBServerManager::save_RSA_keys(const std::pair<std::string, std::string>& k
     }
 
     txn.commit();
-
-    std::cout << "\n";
-
 }
 
 std::string DBServerManager::log_in_client(int& id, const std::string& nickname)
@@ -69,7 +62,6 @@ bool DBServerManager::sign_up_client(int& id, const std::string& nickname, const
     }
     catch(const std::exception& ex)
     {
-        std::cout << ex.what() << '\n';
         id = -1;
         return false;
     }
@@ -100,23 +92,14 @@ std::vector<Contact> DBServerManager::find_contact(int id, const std::string& na
     for (const auto& row : res) 
     {
         Contact contact;
-        // std::cout << __func__ << 1 << '\n';
         contact.id = row[0].as<int>();
-        // std::cout << __func__ << 2 << '\n';
         contact.name = row[1].as<std::string>();
-        // std::cout << __func__ << 3 << '\n';
         contact.public_key = row[2].as<std::string>();
-        // std::cout << __func__ << 4 << '\n';
         contact.picture = row[3].is_null() ? "" : row[3].as<std::string>();
-        // std::cout << __func__ << 5 << '\n';
         contact.chat = -1;
-
-        std::cout << contact.id << ' ';
 
         contacts.push_back(contact);
     }
-
-    std::cout << '\n';
 
     return contacts;
 }
@@ -170,7 +153,4 @@ void DBServerManager::delete_chat(int chat_id)
         txn.quote(chat_id) + ";");
 
     txn.commit();
-
-    std::cout << "CHAT " << chat_id << " DELETED\n";
-
 }

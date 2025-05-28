@@ -1,7 +1,5 @@
 #include "../../include/Client/client.h"
 
-#include <iostream>
-
 Client::Client(boost::asio::io_service& io, const std::string& ip, int port)
     : io_(io), server_ip_(ip), port_(port), socket_(io_), id_(-1) {}
 
@@ -22,15 +20,10 @@ void Client::connect()
     socket_.receive(boost::asio::buffer(recv_buffer_));
 
     server_public_key_ = recv_buffer_.data();
-
-    qDebug() << "SERVER PUBLIC KEY:\n" << server_public_key_ << "\n\n";
-
-    qDebug() << __func__ << '\n';
 }
 
 void Client::send_public_key(const std::string& key)
 {
-    qDebug() << "MY PUBLIC KEY:\n" << key << "\n\n";
     socket_.send(boost::asio::buffer(key));
 }
 
@@ -41,38 +34,23 @@ void Client::start_read()
 
 void Client::read()
 {
-    qDebug() << "WAIT FOR A MESSAGE\n";
     boost::asio::async_read_until(socket_, stream_buf_, msg_end,
         [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
             {
                 if (!ec)
                 {
-                    qDebug() << "RECEIVED MESSAGE!!!!!" << bytes_transferred << "bytes\n";
-
                     std::fill(recv_buffer_.begin(), recv_buffer_.end(), 0);
                     std::size_t len = bytes_transferred < max_msg_length ?
                                           bytes_transferred : max_msg_length;
-
-                    qDebug() << "PREPARE TO EXTRACT\n";
 
                     std::istream is(&stream_buf_);
                     is.read(recv_buffer_.data(), len - strlen(msg_end));
                     stream_buf_.consume(strlen(msg_end));
 
-                    qDebug() << "EXTRACTED " << len - strlen(msg_end) << '\n';
-
                     std::vector<uint8_t> data(recv_buffer_.begin(), recv_buffer_.begin() + len - strlen(msg_end));
                     if (data[0] == 0) data.erase(data.begin());
 
-                    qDebug() << "DATA IS FORMED\n";
-
-                    qDebug() << "DATA:" << data.size();
-                    for(int c : data) qDebug() << (int)c << ' ';
-                    qDebug() << "\nDATA\n\n";
-
                     auto result = Cryptographer::get_cryptographer()->decrypt_AES(data);
-
-                    qDebug() << "RESULT: " << result << '\n';
 
                     process_in_msg(result);
 
@@ -85,11 +63,7 @@ void Client::process_in_msg(std::string& message)
 {
     if (message.find(encryption) != std::string::npos)
     {
-        qDebug() << "ENCRYPTION LEVEL\n";
-
         message = message.substr(message.find(encryption_close_tag) + strlen(encryption_close_tag));
-
-        qDebug() << "MESSAGE: " << message << '\n';
 
         std::vector<uint8_t> data(message.begin(), message.end());
         if (data[0] == 0) data.erase(data.begin());
@@ -99,20 +73,13 @@ void Client::process_in_msg(std::string& message)
 
     tree_.clear();
 
-    qDebug() << "HERE\n";
-
     std::stringstream ss(message);
 
-    qDebug() << ss.str() << '\n';
-
     read_xml(ss, tree_);
-
-    qDebug() << __func__ << ": " << ss.str() << '\n';
 
     auto opt = tree_.get_optional<int>(SERVER_RESPONSE::status);
     if (opt)
     {
-        qDebug() << "GET_AUTH_RESP\n";
         get_auth_resp();
         return;
     }
@@ -122,13 +89,10 @@ void Client::process_in_msg(std::string& message)
     {
         if (*opt)
         {
-            qDebug() << "PROCESS_SYSTEM_MSG_RESPOND\n";
             process_system_msg_respond();
             return;
         }
     }
-
-    qDebug() << "USUAL MESSAGE\n";
 
     SocketMessage msg;
     build_in_msg(msg);
@@ -149,8 +113,6 @@ void Client::get_auth_resp()
     resp_code = tree_.get<int>(SERVER_RESPONSE::status);
     id = tree_.get<int>(SERVER_RESPONSE::id);
     id_ = id;
-
-    qDebug() << "LOGIN RESP: " << resp_code << ' ' << id << '\n';
 
     emit auth_resp(int2SRV_RSP_CD(resp_code), id);
 }
@@ -179,7 +141,6 @@ void Client::process_system_msg_respond()
         }
         catch (const std::exception& ex)
         {
-            qDebug() << ex.what() << '\n';
             contacts = {};
         }
 
@@ -205,51 +166,39 @@ void Client::process_system_msg_respond()
         std::string name;
         std::vector<int> members;
 
-        try
+        for(const auto& tag : tree_.get_child(SYSTEM_MSG_DATA::data))
         {
-            for(const auto& tag : tree_.get_child(SYSTEM_MSG_DATA::data))
+            if (tag.first == "chat_id")
             {
-                if (tag.first == "chat_id")
-                {
-                    chat_id = tree_.get<int>(SYSTEM_MSG_DATA::chat_id);
-                }
-                else if (tag.first == "chat_name")
-                {
-                    name = tree_.get<std::string>(SYSTEM_MSG_DATA::chat_name);
-                }
-                else if (tag.first == "chat_time")
-                {
-                    chat_time = tree_.get<ULL>(SYSTEM_MSG_DATA::chat_time);
-                }
-                else if (tag.first == "contact")
-                {
-                    std::string condata = tag.second.data();
-                    qDebug() << "CONDATA:" << condata;
-                    Contact cn = Contact::deserialize(condata);
-                    cn.saved_in_db = true;
-                    qDebug() << "ID:" << cn.id;
+                chat_id = tree_.get<int>(SYSTEM_MSG_DATA::chat_id);
+            }
+            else if (tag.first == "chat_name")
+            {
+                name = tree_.get<std::string>(SYSTEM_MSG_DATA::chat_name);
+            }
+            else if (tag.first == "chat_time")
+            {
+                chat_time = tree_.get<ULL>(SYSTEM_MSG_DATA::chat_time);
+            }
+            else if (tag.first == "contact")
+            {
+                std::string condata = tag.second.data();
+                Contact cn = Contact::deserialize(condata);
+                cn.saved_in_db = true;
 
-                    members.emplace_back(cn.id);
+                members.emplace_back(cn.id);
 
-                    if (cn.id != id_)
-                    {
-                        qDebug() << __func__ << "ADD CONTACT" << cn.id;
+                if (cn.id != id_)
+                {
+                    client_public_keys_.insert({ cn.id, cn.public_key });
 
-                        qDebug() << "SAVE PUBLIC KEY FOR" << cn.id << ":" << cn.public_key << '\n';
-                        client_public_keys_.insert({ cn.id, cn.public_key });
-
-                        emit add_contact(cn);
-                        emit save_contact(cn);
-                    }
+                    emit add_contact(cn);
+                    emit save_contact(cn);
                 }
             }
+        }
 
-            emit add_new_chat(chat_id, name, chat_time, members);
-        }
-        catch(const std::exception& ex)
-        {
-            qDebug() << "EXCEPTION: " << ex.what() << '\n';
-        }
+        emit add_new_chat(chat_id, name, chat_time, members);
 
         break;
     }
@@ -262,8 +211,6 @@ void Client::process_system_msg_respond()
         {
             int local_port = tree_.get<int>(SYSTEM_MSG_DATA::local_port);
             int remote_port = tree_.get<int>(SYSTEM_MSG_DATA::remote_port);
-
-            qDebug() << remote_ip << contact_id << local_port << remote_port;
 
             set_P2P_status(contact_id, P2P_CONNECTION_TYPE::TRUE,
                            P2P_CONNECTION_STATUS::SUCCESSFUL);
@@ -302,8 +249,6 @@ boost::asio::const_buffer Client::build_out_msg(const SocketMessage& msg)
     std::stringstream ss;
     boost::property_tree::write_xml(ss, tree_);
 
-    qDebug() << "OUT MSG: " << ss.str() << '\n';
-
     return boost::asio::buffer(ss.str());
 }
 
@@ -320,8 +265,6 @@ void Client::build_in_msg(SocketMessage& msg)
 
 void Client::create_P2P_connection(int id, int local_port, const std::string &remote_ip, int remote_port)
 {
-    qDebug() << local_port << remote_ip << remote_port << '\n';
-
     auto p2p_connector = std::make_unique<P2PConnector>(io_, id_, id, local_port, remote_ip,
                                                         remote_port, client_public_keys_.at(id));
     auto [it, _] = p2p_connections_.insert({ id, std::move(p2p_connector) });
@@ -343,12 +286,8 @@ void Client::log_in_user(bool log_in, const std::string& nickname, const std::st
     std::ostringstream oss;
     boost::property_tree::write_xml(oss, tree_);
 
-    qDebug() << "SEND CRED: " << oss.str() << '\n';
-
     auto encrypted = Cryptographer::get_cryptographer()->encrypt_AES(oss.str(), server_public_key_);
-
     std::string enc(encrypted.begin(), encrypted.end());
-    qDebug() << "ENCRYPTED CRED: " << enc << '\n';
 
     socket_.send(boost::asio::buffer(encrypted));
 }
@@ -376,12 +315,6 @@ void Client::write(SocketMessage& msg)
             std::stringstream ss;
             boost::property_tree::write_xml(ss, tree_);
 
-            qDebug() << "send: " << ss.str() << '\n';
-
-            qDebug() << "CLIENT ID:" << msg.receiver[i];
-
-            qDebug() << "USED PUBLIC KEY:" << client_public_keys_[msg.receiver[i]];
-
             auto encrypted = Cryptographer::get_cryptographer()->encrypt_AES(ss.str(),
                                                                              client_public_keys_[msg.receiver[i]]);
 
@@ -401,8 +334,6 @@ void Client::write(SocketMessage& msg)
 
             socket_.send(boost::asio::buffer(encrypted));
         }
-
-        for(int recv : msg.receiver) qDebug() << "WRITE RECV:" << recv;
     }
     else
     {
@@ -444,7 +375,6 @@ void Client::send_system_msg(SYSTEM_MSG type, const std::vector<QString>& data)
 
         for(int i = 2; i < data.size(); i++)
         {
-            qDebug() << data[i] << '\n';
             tree_.add(SYSTEM_MSG_DATA::chat_member, data[i].toStdString());
         }
 
@@ -466,14 +396,11 @@ void Client::send_system_msg(SYSTEM_MSG type, const std::vector<QString>& data)
     auto encrypted = Cryptographer::get_cryptographer()->encrypt_AES(ss.str(), server_public_key_);
     encrypted.insert(encrypted.end(), std::begin(msg_end), std::end(msg_end) - 1);
 
-    qDebug() << "PROCESS_MSG: " << ss.str() << '\n';
-
     socket_.send(boost::asio::buffer(encrypted));
 }
 
 void Client::save_public_key(int id, const std::string& public_key)
 {
-    qDebug() << "CLIENT PUBLIC KEY\n" << public_key << "\n\n";
     client_public_keys_.insert({ id, public_key });
 }
 
@@ -489,11 +416,8 @@ void Client::new_chat(const QString &name, qint64 time, const std::vector<int> m
     data.emplace_back(QString::number(time));
     data.emplace_back(QString::number(id_));
 
-    qDebug() << "CLIENT CHAT TIME:" << QString::number(time);
-
     for(int mem : members)
     {
-        qDebug() << "MEMBER: " << mem << '\n';
         data.emplace_back(QString::number(mem));
     }
 
@@ -504,15 +428,11 @@ void Client::establish_p2p_connection(int id)
 {
     if (p2p_connections_.contains(id)) return;
 
-    qDebug() << "SEND SYSTEM MSG TO ESTABLISH P2P";
-
     send_system_msg(SYSTEM_MSG::GET_REMOTE_PEER_IP, { QString::number(id) });
 }
 
 void Client::close_p2p_connection(int id)
 {
-    qDebug() << __func__ << id << '\n';
-
     if (p2p_connections_.contains(id))
     {
         if (!p2p_connections_[id]->close_p2p_connection())
@@ -521,12 +441,9 @@ void Client::close_p2p_connection(int id)
         }
         p2p_connections_.erase(id);
 
-        qDebug() << "P2P CONNECTION IS CLOSED!\n";
-
         emit set_P2P_status(id, P2P_CONNECTION_TYPE::FALSE,
                             P2P_CONNECTION_STATUS::DISCONNECTED);
     }
-    qDebug() << "leave" << __func__ << '\n';
 }
 
 void Client::receive_p2p_msg(const SocketMessage& msg)
@@ -536,18 +453,11 @@ void Client::receive_p2p_msg(const SocketMessage& msg)
 
 void Client::p2p_connection_failed(int id)
 {
-    qDebug() << __func__ << id << '\n';
-
     if (p2p_connections_.contains(id))
     {
         p2p_connections_[id]->close_p2p_connection();
-        // p2p_connections_.erase(id);
-
-        qDebug() << "P2P TRHROUGH THE SERVER!\n";
 
         emit set_P2P_status(id, P2P_CONNECTION_TYPE::SERVER,
                              P2P_CONNECTION_STATUS::SERVER_FALLBACK);
     }
-
-    qDebug() << "leave" << __func__ << '\n';
 }

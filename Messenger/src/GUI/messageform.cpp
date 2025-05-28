@@ -1,8 +1,6 @@
 #include "../../include/GUI/messageform.h"
 #include "ui/ui_messageform.h"
 
-#include <QDebug>
-
 MessageForm::MessageForm(ClientMessage* message, bool left_align, QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::MessageForm), msg(message)

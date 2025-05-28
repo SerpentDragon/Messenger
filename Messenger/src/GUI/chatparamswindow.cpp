@@ -145,11 +145,8 @@ void ChatParamsWindow::on_OK_button_pressed()
 
     for(const auto& mem : members_)
     {
-        qDebug() << "PUSH MEMBER BACK: " << mem->get_id() << '\n';
         chat_members.push_back(mem->get_id());
     }
-
-    qDebug() << "UNIX TIME:" << unix_time;
 
     emit create_new_chat(chat_name, unix_time, chat_members);
 

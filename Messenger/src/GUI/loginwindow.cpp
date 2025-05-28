@@ -79,15 +79,9 @@ void LoginWindow::process_auth_resp(SERVER_RESP_CODES resp, int id)
     ui->nickname_edit->clear();
     ui->password_edit->clear();
 
-    qDebug() << "START\n";
-
     emit log_in_success();
 
-    qDebug() << "LOGIN SUCCESS\n";
-
     emit db_connect(log_in, id, nickname);
-
-    qDebug() << "AUTH RESP PROCESSED\n";
 }
 
 void LoginWindow::on_sign_up_label_linkActivated(const QString &link)

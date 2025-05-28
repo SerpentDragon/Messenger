@@ -13,7 +13,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/shared_ptr.hpp>
-#include <QDebug>
 #include <QObject>
 
 using boost::asio::ip::tcp;

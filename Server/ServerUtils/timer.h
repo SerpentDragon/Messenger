@@ -17,11 +17,7 @@ public:
     {
         worker_ = std::make_unique<std::thread>([=]() mutable 
         {
-            std::cout << "\n\nSTART TIMER " << target_time <<  "\n\n";
-            // std::this_thread::sleep_until(target_time);
             std::this_thread::sleep_for(std::chrono::seconds(target_time));
-
-            std::cout << "SEND DATA!!!!";
 
             method();
         });
