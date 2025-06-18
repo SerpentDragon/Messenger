@@ -309,7 +309,7 @@ void MainWindow::display_sent_msg(const ClientMessage &msg, const std::vector<in
 void MainWindow::add_contact(const Contact& contact)
 {
     if (std::any_of(contacts_.begin(), contacts_.end(),
-                    [contact](const Contact& cn){ return cn.id == contact.id; }))
+                    [contact](const Contact& cn){ return cn.id == contact.id && contact.id != -1; }))
     {
         return;
     }
@@ -317,7 +317,7 @@ void MainWindow::add_contact(const Contact& contact)
     contacts_.push_back(contact);
     contacts_.back().saved_in_db = true;
 
-    emit save_contact(contacts_.back());
+    if (!contact.saved_in_db) emit save_contact(contacts_.back());
 
     display_contacts();
 }
@@ -326,6 +326,7 @@ void MainWindow::create_new_chat(const QString &name, qint64 time, const std::ve
 {
     std::vector<int> mems;
     std::copy_if(members.begin(), members.end(), std::back_inserter(mems), [](int mem){ return mem > 0; });
+    emit new_chat(name, time, mems);
 }
 
 void MainWindow::delete_messages(int type, const std::vector<int> &msgs_ids)
